@@ -26,7 +26,12 @@ where:
 
 The method will be called, and then the return value from the method will be written in JSON format, like this:
 
-{"status":true,
+{"status":true,"result": <result value in JSON>}
+
+where 'status' is true if the method called returned without exception, otherwise 'status' is false.  The 'result'
+is the JSON string-ified version of the method's return value.  If the method throws an exception, the exception
+message is the "result" and the status is false.  See json-io for a Java-script 'call()' method that makes
+the Ajax request for you with a very simple notation.  Use call("FooController.barMethod", []);
 
 In order for a 'Controller' class (That is the standard name of classes that are callable externally) to be called,
 it must have the Java annotation @ControllerClass.  This can be added directly to the class, or to an interface
@@ -59,4 +64,4 @@ Version History
 * 1.0.0
  * Initial version
 
-By: John DeRegnaucourt and Ken Partlow
+By: John DeRegnaucourt
