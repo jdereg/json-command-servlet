@@ -14,7 +14,7 @@ To include in your project:
 XHR / Ajax calls can be sent as HTTP GET or POST requests.  To make a request, it should be formatted like this:
 
 HTTP://mycompany.com/Context/controller/method
-<HTTP HEADERS>
+[HTTP HEADERS]
 CR LF CR LF
 [arguments]
 
@@ -26,7 +26,7 @@ where:
 
 The method will be called, and then the return value from the method will be written in JSON format, like this:
 
-{"status":true,"result": <result value in JSON>}
+{"status":true,"result": [result value in JSON]}   # Result not in array brackets unless result is array
 
 where 'status' is true if the method called returned without exception, otherwise 'status' is false.  The 'result'
 is the JSON string-ified version of the method's return value.  If the method throws an exception, the exception
