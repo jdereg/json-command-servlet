@@ -1,0 +1,62 @@
+json-command-servlet
+====================
+Java servlet that processes Ajax / XHR requests and returns JSON responses.
+
+To include in your project:
+```
+<dependency>
+  <groupId>com.cedarsoftware</groupId>
+  <artifactId>json-command-servlet</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
+XHR / Ajax calls can be sent as HTTP GET or POST requests.  To make a request, it should be formatted like this:
+
+HTTP://mycompany.com/Context/controller/method
+<HTTP HEADERS>
+CR LF CR LF
+[arguments]
+
+where:
+
+'controller' is the bean name of a controller that exposes methods that can be publicly called.
+'method' is the name of the method to be called on the controller.
+[arguments] is a JSON array of arguments matching the arguments required by the method.
+
+The method will be called, and then the return value from the method will be written in JSON format, like this:
+
+{"status":true,
+
+In order for a 'Controller' class (That is the standard name of classes that are callable externally) to be called,
+it must have the Java annotation @ControllerClass.  This can be added directly to the class, or to an interface
+that the class inherits from.
+
+By default, marking a class as @ControllerClass, all public methods are available to be called externally (through
+this servlet).  If you have a public method that you do not want called, place the Java annotation @ControllerMethod
+on the method with allow=false [@ControllerMethod(allow = false)].  The JsonCommandServlet will honor this annotation
+and return a JSON error message indicating that a method could not be accessed.
+
+No special annotations have to be added to your methods to be called externally.  Simply add the @ControllerClass
+annotation to the Controller or its interface, and the public methods will be accessible.
+
+This effectively makes all Controller method's like mini-servlets. If you need access to the HttpServletRequest or
+HttpServletResponse objects within your Controller method, you can access JsonCommandServlet.servletRequest.get() or
+JsonCommandServlet.servletResponse.get().  The command servlet places the request and response objects on a ThreadLocal
+and makes it available for the lifespace of your method call.
+
+If you need to stream data back, you can use the JsonCommandServlet.servletResponse.get() to obtain the HttpServletResponse
+object, and then use the response object set HTTP Response headers and to get the output stream to write to.  You may be
+wondering, how do I prevent the JsonCommandServlet from writing a JSON standard response object instead
+of the streamed data?
+
+For controller methods that need to stream data back, place the @HttpResponseHandler handler annotation on your method
+and the JsonCommandServlet will not communicate back the HTTP response, but instead your method is expected to.  Use
+the HttpServletResponse object obtained from the JsonCommandServlet.servletResponse.get() call to set HTTP Response
+headers and to obtain the output stream to write to.
+
+Version History
+* 1.0.0
+ * Initial version
+
+By: John DeRegnaucourt and Ken Partlow
