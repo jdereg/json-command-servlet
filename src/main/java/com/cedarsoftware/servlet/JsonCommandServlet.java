@@ -2,7 +2,6 @@ package com.cedarsoftware.servlet;
 
 import com.cedarsoftware.servlet.framework.driver.ServletCtxProvider;
 import com.cedarsoftware.util.IOUtilities;
-import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.JsonWriter;
 import org.apache.log4j.Logger;
@@ -13,7 +12,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -23,8 +21,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.DeflaterOutputStream;
-import java.util.zip.GZIPOutputStream;
 
 /**
  * This class will accept JSON REST requests, find the named Spring Bean,
