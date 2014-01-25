@@ -100,7 +100,6 @@ public class JsonCommandServlet extends HttpServlet
     {
         try
         {
-            _log.error("JsonCommandServlet spring init()");
             _appCtx = ServletCtxProvider.getAppCtx(getServletContext());
         }
         catch (Exception e)
