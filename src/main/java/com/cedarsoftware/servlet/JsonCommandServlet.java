@@ -98,8 +98,15 @@ public class JsonCommandServlet extends HttpServlet
 
     public void init()
     {
-        _log.error("JsonCommandServlet spring init()");
-        _appCtx = ServletCtxProvider.getAppCtx(getServletContext());
+        try
+        {
+            _log.error("JsonCommandServlet spring init()");
+            _appCtx = ServletCtxProvider.getAppCtx(getServletContext());
+        }
+        catch (Exception e)
+        {
+            _log.error("Error initializing app context", e);
+        }
     }
 
     /**
