@@ -62,6 +62,6 @@ headers and to obtain the output stream to write to.
 
 Version History
 * 1.0.0
- * Initial version
+ * Official release of JsonCommandServlet
 
 By: John DeRegnaucourt
