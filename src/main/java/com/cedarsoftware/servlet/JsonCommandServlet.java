@@ -2,6 +2,7 @@ package com.cedarsoftware.servlet;
 
 import com.cedarsoftware.servlet.framework.driver.ServletCtxProvider;
 import com.cedarsoftware.util.IOUtilities;
+import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.JsonWriter;
 import org.apache.log4j.Logger;
@@ -288,8 +289,8 @@ public class JsonCommandServlet extends HttpServlet
         }
 
         Class targetType = target.getClass();
-
-        if (targetType == null)
+        Annotation annontation = ReflectionUtils.getClassAnnotation(targetType, ControllerClass.class);
+        if (annontation == null)
         {
             return new Object[] {"error: target '" + bean + "' is not marked as a ControllerClass.", false, false};
         }
@@ -315,7 +316,7 @@ public class JsonCommandServlet extends HttpServlet
                     return new Object[] {"error: Method not found: " + methodKey, false, false};
                 }
 
-                Annotation a = getMethodAnnotation(method, ControllerMethod.class);
+                Annotation a = ReflectionUtils.getMethodAnnotation(method, ControllerMethod.class);
                 if (a != null)
                 {
                     ControllerMethod cm = (ControllerMethod)a;
@@ -327,7 +328,7 @@ public class JsonCommandServlet extends HttpServlet
 
                 _methodMap.put(methodKey, method);
             }
-            Annotation a = getMethodAnnotation(method, HttpResponseHandler.class);
+            Annotation a = ReflectionUtils.getMethodAnnotation(method, HttpResponseHandler.class);
             selfHandlingResponse = a != null;
 
             // Store Servlet Request Response objects on the current thread so that Controller's can access them
@@ -514,33 +515,5 @@ public class JsonCommandServlet extends HttpServlet
         {
             throw new RuntimeException(e.getTargetException());
         }
-    }
-
-    public static Annotation getMethodAnnotation(Method method, Class annoClass)
-    {
-    	Annotation a = method.getAnnotation(annoClass);
-    	if (a != null)
-    	{
-    		return a;
-    	}
-
-    	Class[] interfaces = method.getDeclaringClass().getInterfaces();
-    	if (interfaces != null)
-    	{
-    		for (Class interFace : interfaces)
-    		{
-    			try
-    			{
-					Method m = interFace.getMethod(method.getName(), method.getParameterTypes());
-					a = m.getAnnotation(annoClass);
-					if (a != null)
-					{
-						return a;
-					}
-				}
-    			catch (Exception ignored) { }
-    		}
-    	}
-    	return null;
     }
 }
