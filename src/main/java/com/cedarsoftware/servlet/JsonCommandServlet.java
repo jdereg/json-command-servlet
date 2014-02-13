@@ -208,7 +208,7 @@ public class JsonCommandServlet extends HttpServlet
             }
             else
             {
-                sendJsonResponse(request, response, new Object[]{"error: Communications issue between your computer and our webite (" + msg + ')', false});
+                sendJsonResponse(request, response, new Object[]{"error: Communications issue between your computer and our website (" + msg + ')', false});
             }
             return;
         }
@@ -289,8 +289,8 @@ public class JsonCommandServlet extends HttpServlet
         }
 
         Class targetType = target.getClass();
-        Annotation annontation = ReflectionUtils.getClassAnnotation(targetType, ControllerClass.class);
-        if (annontation == null)
+        Annotation annotation = ReflectionUtils.getClassAnnotation(targetType, ControllerClass.class);
+        if (annotation == null)
         {
             return new Object[] {"error: target '" + bean + "' is not marked as a ControllerClass.", false, false};
         }
