@@ -78,24 +78,12 @@ public class JsonCommandServlet extends HttpServlet
     private static final long serialVersionUID = 5008267310712043139L;
     private static final Logger _log = Logger.getLogger(JsonCommandServlet.class);
     private static final Map<String, Method> _methodMap = new ConcurrentHashMap<String, Method>();
+    public static final String ATTRIBUTE_STATUS = "status";
+    public static final String ATTRIBUTE_FAIL_MESSAGE = "failMsg";
     private static Pattern _cmdUrlPattern = Pattern.compile("^/([^/]+)/([^/]+)(.*)$");	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
     private AppCtx _appCtx;
-
-    public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<HttpServletRequest>()
-    {
-        public void set(HttpServletRequest value)
-        {
-            super.set(value);
-        }
-    };
-
-    public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<HttpServletResponse>()
-    {
-        public void set(HttpServletResponse value)
-        {
-            super.set(value);
-        }
-    };
+    public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<HttpServletRequest>();
+    public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<HttpServletResponse>();
 
     public void init()
     {
@@ -115,12 +103,16 @@ public class JsonCommandServlet extends HttpServlet
      */
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
     {
+        request.setAttribute(ATTRIBUTE_STATUS, true);
+        servletRequest.set(request);
+        servletResponse.set(response);
         // Step 1: Ensure that the request header has Content-Length correctly specified.
         String json = request.getParameter("json");
 
         if (json == null || json.trim().length() < 1)
         {
             sendJsonResponse(request, response, new Object[] {"error: HTTP-GET had empty or no 'json' parameter.", false});
+            removeThreadLocals();
             return;
         }
 
@@ -130,6 +122,7 @@ public class JsonCommandServlet extends HttpServlet
         }
 
         processJsonRequest(request, response, json);
+        removeThreadLocals();
     }
 
     /**
@@ -138,10 +131,14 @@ public class JsonCommandServlet extends HttpServlet
      */
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
     {
+        request.setAttribute(ATTRIBUTE_STATUS, true);
+        servletRequest.set(request);
+        servletResponse.set(response);
         // Ensure that the request header has Content-Length correctly specified.
         if (request.getContentLength() < 1)
         {
             sendJsonResponse(request, response, new Object[] {"error: Call to server had incorrect Content-Length specified.", false});
+            removeThreadLocals();
             return;
         }
 
@@ -156,20 +153,25 @@ public class JsonCommandServlet extends HttpServlet
             {
                 _log.debug("POST RESTful JSON");
             }
+            processJsonRequest(request, response, json);
         }
         catch(Exception e)
         {
             sendJsonResponse(request, response, new Object[] {"error: Unable to read HTTP-POST JSON content.", false});
-            return;
         }
+        removeThreadLocals();
+    }
 
-        processJsonRequest(request, response, json);
+    private void removeThreadLocals()
+    {
+        servletRequest.remove();
+        servletResponse.remove();
     }
 
     private void processJsonRequest(HttpServletRequest request, HttpServletResponse response, String json)
     {
         Object[] ret;
-        boolean methodHandledResponse = false;
+        boolean methodHandledResponse;
         try
         {
             // ret[0] is controller return value
@@ -330,16 +332,7 @@ public class JsonCommandServlet extends HttpServlet
             }
             Annotation a = ReflectionUtils.getMethodAnnotation(method, HttpResponseHandler.class);
             selfHandlingResponse = a != null;
-
-            // Store Servlet Request Response objects on the current thread so that Controller's can access them
-            // via JsonCommandServlet.servletRequest.get(), JsonCommandServlet.servletResponse.get()
-            servletRequest.set(request);
-            servletResponse.set(response);
             result = callMethod(method, target, args);
-
-            // Remove request / response from Thread
-            servletRequest.remove();
-            servletResponse.remove();
         }
         catch (ThreadDeath t)
         {
@@ -378,6 +371,12 @@ public class JsonCommandServlet extends HttpServlet
     {
         try
         {
+            Boolean success = (Boolean) request.getAttribute(ATTRIBUTE_STATUS);
+            if (success == false)
+            {   // If the called method forcefully set status to false, then overwrite the data with the
+                // value from the ATTRIBUTE_FAIL_MESSAGE (which will contain the failure reason).
+                o[0] = request.getAttribute(ATTRIBUTE_FAIL_MESSAGE);
+            }
             response.setContentType("application/json");
             response.setHeader("Cache-Control", "private, no-cache, no-store");
 
@@ -397,12 +396,19 @@ public class JsonCommandServlet extends HttpServlet
 
             retVal = null;  // clear reference for GC friendliness
             s.append(",\"status\":");
-            s.append(o[1]);
+            if (!success)
+            {   // Servlet handler (invoked method) can force the status to null
+                s.append(false);
+            }
+            else
+            {
+                s.append(o[1]);
+            }
             s.append('}');
 
             ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream();
             jsonBytes.write(s.toString().getBytes("UTF-8"));
-            s.setLength(0);
+            s.setLength(0);    // being GC friendly, since JSON response can be large
             s = null;
 
             // For debugging
