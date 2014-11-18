@@ -7,7 +7,7 @@ To include in your project:
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-command-servlet</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
 </dependency>
 ```
 <a class="coinbase-button" data-code="085e7852d6f8c97474d5a8d74307a49f" data-button-style="custom_large" data-custom="json-command-servlet" href="https://coinbase.com/checkouts/085e7852d6f8c97474d5a8d74307a49f">Feed hungry developers...</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
@@ -62,6 +62,8 @@ the HttpServletResponse object obtained from the JsonCommandServlet.servletRespo
 headers and to obtain the output stream to write to.
 
 Version History
+* 1.1.1
+ * Updated to use latest versions of json-io and java-util.
 * 1.1.0
  * Added ability for the ajax-called method to set the return status directly along with a text message.  This is done by using the request's attributes.
 * 1.0.0
