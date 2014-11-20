@@ -417,8 +417,11 @@ public class JsonCommandServlet extends HttpServlet
                 _log.debug("  return " + new String(jsonBytes.toByteArray(), "UTF-8"));
             }
 
-            if (jsonBytes.size() > 512 && request.getHeader("Accept-Encoding").contains("gzip"))
+            //  Header can be null coming from other WebClients (such as .NET client)
+            String header = request.getHeader("Accept-Encoding");
+            if (jsonBytes.size() > 512 && header != null && header.contains("gzip"))
             {   // Only compress if the output is longer than 512 bytes.
+
                 ByteArrayOutputStream compressedBytes = new ByteArrayOutputStream(jsonBytes.size());
                 IOUtilities.compressBytes(jsonBytes, compressedBytes);
 
