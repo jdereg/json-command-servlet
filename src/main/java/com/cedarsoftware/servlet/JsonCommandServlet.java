@@ -5,7 +5,8 @@ import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.ReflectionUtils;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.JsonWriter;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -75,25 +76,25 @@ import java.util.regex.Pattern;
  */
 public class JsonCommandServlet extends HttpServlet
 {
+    private AppCtx appCtx;
     private static final long serialVersionUID = 5008267310712043139L;
-    private static final Logger _log = Logger.getLogger(JsonCommandServlet.class);
-    private static final Map<String, Method> _methodMap = new ConcurrentHashMap<String, Method>();
+    private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class);
+    private static final Map<String, Method> methodMap = new ConcurrentHashMap<>();
+    private static Pattern cmdUrlPattern = Pattern.compile("^/([^/]+)/([^/]+)(.*)$");	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
     public static final String ATTRIBUTE_STATUS = "status";
     public static final String ATTRIBUTE_FAIL_MESSAGE = "failMsg";
-    private static Pattern _cmdUrlPattern = Pattern.compile("^/([^/]+)/([^/]+)(.*)$");	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
-    private AppCtx _appCtx;
-    public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<HttpServletRequest>();
-    public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<HttpServletResponse>();
+    public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<>();
+    public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>();
 
     public void init()
     {
         try
         {
-            _appCtx = ServletCtxProvider.getAppCtx(getServletContext());
+            appCtx = ServletCtxProvider.getAppCtx(getServletContext());
         }
         catch (Exception e)
         {
-            _log.error("Error initializing app context", e);
+            LOG.error("Error initializing app context", e);
         }
     }
 
@@ -116,9 +117,9 @@ public class JsonCommandServlet extends HttpServlet
             return;
         }
 
-        if (_log.isDebugEnabled())
+        if (LOG.isDebugEnabled())
         {
-            _log.debug("GET RESTful JSON");
+            LOG.debug("GET RESTful JSON");
         }
 
         processJsonRequest(request, response, json);
@@ -149,9 +150,9 @@ public class JsonCommandServlet extends HttpServlet
             IOUtilities.transfer(request.getInputStream(), jsonBytes);
             json = new String(jsonBytes, "UTF-8");
 
-            if (_log.isDebugEnabled())
+            if (LOG.isDebugEnabled())
             {
-                _log.debug("POST RESTful JSON");
+                LOG.debug("POST RESTful JSON");
             }
             processJsonRequest(request, response, json);
         }
@@ -162,7 +163,7 @@ public class JsonCommandServlet extends HttpServlet
         removeThreadLocals();
     }
 
-    private void removeThreadLocals()
+    private static void removeThreadLocals()
     {
         servletRequest.remove();
         servletResponse.remove();
@@ -197,7 +198,7 @@ public class JsonCommandServlet extends HttpServlet
             {
                 if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().getName()))
                 {
-                    _log.info("Client aborted connection while processing JSON request.");
+                    LOG.info("Client aborted connection while processing JSON request.");
                 }
                 else
                 {
@@ -228,7 +229,7 @@ public class JsonCommandServlet extends HttpServlet
 	            {
 	                json = json.substring(0, 255);
 	            }
-	            _log.info("Slow return response: " + json + " took " + ((end - start) / 1000000) + " ms");
+	            LOG.info("Slow return response: " + json + " took " + ((end - start) / 1000000) + " ms");
 	        }
         }
     }
@@ -243,13 +244,12 @@ public class JsonCommandServlet extends HttpServlet
     private Object[] makeJsonCall(HttpServletRequest request, HttpServletResponse response, String json) throws Exception
     {
         String pathInfo = request.getPathInfo();
-        Matcher matcher = _cmdUrlPattern.matcher(pathInfo);
-        matcher.find();
+        Matcher matcher = cmdUrlPattern.matcher(pathInfo);
 
-        if (matcher.groupCount() < 2)
+        if (matcher.find() && matcher.groupCount() < 2)
         {
             String msg = "error: Invalid JSON request - /controller/method not specified: " + json;
-            _log.warn(msg);
+            LOG.warn(msg);
             return new Object[] {msg, false, false};
         }
 
@@ -263,7 +263,7 @@ public class JsonCommandServlet extends HttpServlet
         catch(Exception e)
         {
         	String errMsg = "error: unable to parse JSON argument list on call '" + bean + "." + methodName + "'";
-        	_log.error(errMsg, e);
+        	LOG.error(errMsg, e);
         	return new Object[] {errMsg, false, false};
         }
 
@@ -274,19 +274,19 @@ public class JsonCommandServlet extends HttpServlet
         Object[] args = (Object[]) jArgs;
         int argCount = (args == null) ? 0 : args.length;
 
-        if (_log.isDebugEnabled())
+        if (LOG.isDebugEnabled())
         {
-            _log.debug("  " + bean + '.' + methodName + '(' + json.substring(1, json.length() - 1) + ')');
+            LOG.debug("  " + bean + '.' + methodName + '(' + json.substring(1, json.length() - 1) + ')');
         }
 
         Object target;
         try
         {
-            target = _appCtx.getBean(bean);
+            target = appCtx.getBean(bean);
         }
         catch(Exception e)
         {
-            _log.warn("Invalid JSON target: " + bean);
+            LOG.warn("Invalid JSON target: " + bean);
             return new Object[] {"error: Invalid target '" + bean + "'.", false, false};
         }
 
@@ -309,7 +309,7 @@ public class JsonCommandServlet extends HttpServlet
         try
         {
             String methodKey = bean + '.' + methodName + '.' + argCount;
-            Method method = _methodMap.get(methodKey);
+            Method method = methodMap.get(methodKey);
             if (method == null)
             {
                 method = getMethod(targetType, methodName, argCount);
@@ -328,7 +328,7 @@ public class JsonCommandServlet extends HttpServlet
                     }
                 }
 
-                _methodMap.put(methodKey, method);
+                methodMap.put(methodKey, method);
             }
             Annotation a = ReflectionUtils.getMethodAnnotation(method, HttpResponseHandler.class);
             selfHandlingResponse = a != null;
@@ -346,7 +346,7 @@ public class JsonCommandServlet extends HttpServlet
             {
                 msg += ' ' + t.getMessage();
             }
-            _log.warn("An exception occurred calling '" + bean + '.' + methodName + "'", t);
+            LOG.warn("An exception occurred calling '" + bean + '.' + methodName + "'", t);
             result = "error: '" + methodName + "' failed with the following error: " + msg;
             status = false;
         }
@@ -354,15 +354,12 @@ public class JsonCommandServlet extends HttpServlet
         // Time the Controller call.
         long end = System.nanoTime();
 
-        if (end - start > 2000000000)
+        String api = bean + '.' + methodName + json;
+        if (api.length() > 256)
         {
-            String api = json;
-            if (api.length() > 256)
-            {
-                api = api.substring(0, 255);
-            }
-            _log.info("Slow API: " + api + " took " + ((end - start) / 1000000) + " ms");
+            api = api.substring(0, 255);
         }
+        LOG.info(api + ' ' + ((end - start) / 1000000) + " ms");
 
         return new Object[]{result, status, selfHandlingResponse};
     }
@@ -372,7 +369,7 @@ public class JsonCommandServlet extends HttpServlet
         try
         {
             Boolean success = (Boolean) request.getAttribute(ATTRIBUTE_STATUS);
-            if (success == false)
+            if (!success)
             {   // If the called method forcefully set status to false, then overwrite the data with the
                 // value from the ATTRIBUTE_FAIL_MESSAGE (which will contain the failure reason).
                 o[0] = request.getAttribute(ATTRIBUTE_FAIL_MESSAGE);
@@ -412,9 +409,9 @@ public class JsonCommandServlet extends HttpServlet
             s = null;
 
             // For debugging
-            if (_log.isDebugEnabled())
+            if (LOG.isDebugEnabled())
             {
-                _log.debug("  return " + new String(jsonBytes.toByteArray(), "UTF-8"));
+                LOG.debug("  return " + new String(jsonBytes.toByteArray(), "UTF-8"));
             }
 
             //  Header can be null coming from other WebClients (such as .NET client)
@@ -454,20 +451,20 @@ public class JsonCommandServlet extends HttpServlet
             {
                 if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().getName()))
                 {
-                    _log.info("Client aborted connection while processing JSON request.");
+                    LOG.info("Client aborted connection while processing JSON request.");
                 }
                 else
                 {
-                    _log.warn("IOException - sending response: " + msg);
+                    LOG.warn("IOException - sending response: " + msg);
                 }
             }
             else if (t instanceof AccessControlException)
             {
-                _log.warn("AccessControlException - sending response: " + msg);
+                LOG.warn("AccessControlException - sending response: " + msg);
             }
             else
             {
-                _log.warn("An unexpected exception occurred sending JSON response to client", t);
+                LOG.warn("An unexpected exception occurred sending JSON response to client", t);
             }
         }
     }
@@ -481,7 +478,7 @@ public class JsonCommandServlet extends HttpServlet
 
         if (!(e instanceof AccessControlException || e instanceof IOException))
         {
-            _log.warn("unexpected exception occurred: ", e);
+            LOG.warn("unexpected exception occurred: ", e);
         }
         else
         {
@@ -491,7 +488,7 @@ public class JsonCommandServlet extends HttpServlet
                 msg = msg + ' ' + e.getMessage();
             }
 
-            _log.warn("exception occurred: " + msg);
+            LOG.warn("exception occurred: " + msg);
         }
 
         return e;
