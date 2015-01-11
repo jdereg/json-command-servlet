@@ -77,7 +77,6 @@ import java.util.regex.Pattern;
 public class JsonCommandServlet extends HttpServlet
 {
     private AppCtx appCtx;
-    private static final long serialVersionUID = 5008267310712043139L;
     private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class);
     private static final Map<String, Method> methodMap = new ConcurrentHashMap<>();
     private static Pattern cmdUrlPattern = Pattern.compile("^/([^/]+)/([^/]+)(.*)$");	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
