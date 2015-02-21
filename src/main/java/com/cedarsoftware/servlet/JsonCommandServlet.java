@@ -1,8 +1,11 @@
 package com.cedarsoftware.servlet;
 
 import com.cedarsoftware.servlet.framework.driver.ServletCtxProvider;
+import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.IOUtilities;
 import com.cedarsoftware.util.ReflectionUtils;
+import com.cedarsoftware.util.StringUtilities;
+import com.cedarsoftware.util.io.JsonObject;
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.JsonWriter;
 import org.apache.logging.log4j.LogManager;
@@ -16,9 +19,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessControlException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -510,7 +517,7 @@ public class JsonCommandServlet extends HttpServlet
     {
         try
         {
-            return method.invoke(target, args);
+            return method.invoke(target, convertArgs(method, args));
         }
         catch (IllegalAccessException e)
         {
@@ -519,6 +526,126 @@ public class JsonCommandServlet extends HttpServlet
         catch (InvocationTargetException e)
         {
             throw new RuntimeException(e.getTargetException());
+        }
+    }
+
+    private static Object[] convertArgs(Method method, Object[] args)
+    {
+        Object[] converted = new Object[args.length];
+        Class[] types = method.getParameterTypes();
+
+        for (int i=0; i < args.length; i++)
+        {
+            if (args[i] == null)
+            {
+                converted[i] = null;
+            }
+            else if (args[i] instanceof Class)
+            {   // Special handle an argument of type 'Class' because isLogicalPrimitive() is true for Class.
+                converted[i] = args[i];
+            }
+            else if (JsonReader.isLogicalPrimitive(args[i].getClass()))
+            {   // Marshal all primitive types, including Date, String (any combination of directions -
+                // String to number, number to String, Date to String, etc.)  See Converter.convert().
+                converted[i] = Converter.convert(args[i], types[i]);
+            }
+            else if (args[i] instanceof Collection)
+            {
+                if (Collection.class.isAssignableFrom(types[i]))
+                {   // easy: Collection to Collection Type
+                    converted[i] = args[i];
+                }
+                else if (types[i].isArray())
+                {   // hard: Collection to array type (handles any array type, String[], Object[], Custom[], etc.)
+                    Collection inbound = (Collection)args[i];
+                    converted[i] = arrayBuilder(types[i].getComponentType(), inbound);
+                }
+                else
+                {
+                    throw new IllegalArgumentException("Cannot pass Collection into an argument type that is not a Collection or Array[], arg type: " + types[i].getName());
+                }
+            }
+            else if (args[i].getClass().isArray())
+            {
+                if (types[i].isArray())
+                {   // easy: array to array
+                    converted[i] = args[i];
+                }
+                else if (Collection.class.isAssignableFrom(types[i]))
+                {   // harder: array to collection
+                    try
+                    {
+                        Collection col = (Collection) JsonReader.newInstance(types[i]);
+                        Collections.addAll(col, args);
+                    }
+                    catch (IOException e)
+                    {
+                        throw new IllegalArgumentException("Could not create Collection instance for type: " + types[i].getName());
+                    }
+                }
+                else
+                {
+                    throw new IllegalArgumentException("Cannot pass Array[] into an argument type that is not a Collection or Array[], arg type: " + types[i].getName());
+                }
+            }
+            else if (args[i] instanceof JsonObject)
+            {
+                JsonObject jsonObj = (JsonObject) args[i];
+                Object type = jsonObj.get("@type");
+                if (!(type instanceof String) || !StringUtilities.hasContent((String) type))
+                {
+                    jsonObj.put("@type", types[i].getName());
+                }
+                CmdReader reader = new CmdReader();
+                try
+                {
+                    converted[i] = reader.convertParsedMapsToJava(jsonObj);
+                }
+                catch (IOException e)
+                {
+                    throw new IllegalArgumentException("Unable to convert JSON object to arg type: " + types[i].getName(), e);
+                }
+            }
+            else if (args[i] instanceof Map)
+            {
+                Map map = (Map) args[i];
+                if (Map.class.isAssignableFrom(types[i]))
+                {
+                    converted[i] = map;
+                }
+                else
+                {   // Map on input, being set into a non-map type.  Make sure @type gets set correctly.
+                    throw new IllegalArgumentException("Unable to convert Map to arg type: " + types[i].getName());
+                }
+            }
+            else
+            {
+                converted[i] = args[i];
+            }
+        }
+        return converted;
+    }
+
+    public static <T> T[] arrayBuilder(Class<T> classToCastTo, Collection c)
+    {
+        T[] array = (T[]) c.toArray((T[]) Array.newInstance(classToCastTo, c.size()));
+        Iterator i = c.iterator();
+        int idx = 0;
+        while (i.hasNext())
+        {
+            Array.set(array, idx++, i.next());
+        }
+        return array;
+    }
+
+    /**
+     * Extend JsonReader to gain access to the convertParsedMapsToJava() API.
+     */
+    static class CmdReader extends JsonReader
+    {
+        public Object convertParsedMapsToJava(JsonObject root) throws IOException
+        {
+            return super.convertParsedMapsToJava(root);
         }
     }
 }
