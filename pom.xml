@@ -33,11 +33,11 @@
     </developers>
 
     <properties>
-        <version.java-util>1.17.1</version.java-util>
-        <version.json.io>2.9.4-SNAPSHOT</version.json.io>
+        <version.java-util>1.18.0</version.java-util>
+        <version.json.io>2.9.4</version.json.io>
         <version.servlet>3.0.1</version.servlet>
         <version.log4j>2.1</version.log4j>
-        <version.junit>4.11</version.junit>
+        <version.junit>4.12</version.junit>
         <version.spring>4.1.4.RELEASE</version.spring>
         <version.plugin.compiler>3.2</version.plugin.compiler>
         <version.plugin.groovy.eclipse.compiler>2.9.1-01</version.plugin.groovy.eclipse.compiler>
@@ -47,6 +47,7 @@
         <version.plugin.javadoc>2.10.1</version.plugin.javadoc>
         <version.plugin.gpg>1.5</version.plugin.gpg>
         <version.plugin.release>2.5.1</version.plugin.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <pluginRepositories>

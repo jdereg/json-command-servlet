@@ -62,6 +62,10 @@ the HttpServletResponse object obtained from the JsonCommandServlet.servletRespo
 headers and to obtain the output stream to write to.
 
 Version History
+* 1.2.1
+ * Added significant improvement in argument marshalling.  Maps are converted to the appropriate class if they match a non-Map argument.  All primitive arguments are set using java-util's Converter.convert() API.
+ * Updated to use java-util 1.18.0.
+ * Updated to use json-io 2.9.4.
 * 1.2.0
  * Changed logging to Log4J2
  * Now using Spring 4.1.x
