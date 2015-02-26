@@ -10,7 +10,6 @@ To include in your project:
   <version>1.2.0</version>
 </dependency>
 ```
-<a class="coinbase-button" data-code="085e7852d6f8c97474d5a8d74307a49f" data-button-style="custom_large" data-custom="json-command-servlet" href="https://coinbase.com/checkouts/085e7852d6f8c97474d5a8d74307a49f">Feed hungry developers...</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
 
 [Donations welcome](https://coinbase.com/jdereg)
 
