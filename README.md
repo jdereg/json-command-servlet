@@ -91,13 +91,13 @@ When calling an n-cube controller from Javascript, the call looks like this:
 
     var result = call("apollo.getCell", [{'state':'OH'}]);
 
-In this example, the n-cube 'apollo', method 'getCell([state:'OH'])' are invoked.  N-Cubes are called this way to allow
+In this example, the n-cube `apollo`, method `getCell([state:'OH'])` are invoked.  N-Cubes are called this way to allow
 you to have as many rules execute (and scoping) as desired.  You can call into a lookup table (decision table), a
 decision tree (a cube that looks into other cubes, and so on), a rules cube, and a template cube (mail-merge with
 replaceable parts).
 
 Any read-only n-cube method can be called in this manner:
-    containsCell,
+    `containsCell,
     containsCellById,
     getApplicationID,
     getAxes,
@@ -122,7 +122,7 @@ Any read-only n-cube method can be called in this manner:
     sha1,
     toFormattedJson,
     toHtml,
-    validateCubeName
+    validateCubeName`
 
 See the n-cube documentation for what arguments are required to be passed into these methods.  The most common API to
 call is `getCell(input, output)`, where input and output are Maps.
