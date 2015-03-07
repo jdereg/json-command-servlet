@@ -122,18 +122,21 @@ Any read-only n-cube method can be called in this manner:
     sha1,
     toFormattedJson,
     toHtml,
-    validateCubeName`
+    validateCubeName.`
 
 See the n-cube documentation for what arguments are required to be passed into these methods.  The most common API to
 call is `getCell(input, output)`, where input and output are Maps.
 
+Construction the n-cube controller
+----------------------------------
 One common technique for more functional controllers, is to create an n-cube with a String DISCRETE axis named `method`.
 Each column (String) is a method name.  The associated cell is a GroovyExpression that will execute. You can have
 additional scoping axes (as many as you want).  In order to call this one, the Javascript code would look like:
-`call("apollo.getCell", [{method:'calcPrice',state:'OH'}]);` This will find the n-cube apollo, locate the 'method' axis,
-and the `state` axis, then execute cell at that location.  If the cell contains a simple value, it will be returned.
-If the cell is a GroovyExpression, it will be executed.  The cell have a URL to your groovy code, allowing you to edit
-your code in your favorite IDE (as well as single step debug it too).
+`call("apollo.getCell", [{method:'calcPrice',state:'OH'}]);` This will find the n-cube apollo, locate the 'method' axis
+and select the `calcPrice` column, then locate the `state` axis locating the `OH` column (or Default if OH was not on 
+there), then execute cell at that location.  If the cell contains a simple value, it will be returned. If the cell is a
+GroovyExpression, it will be executed.  The cell have a URL to your groovy code, allowing you to edit your code in your 
+favorite IDE (as well as single step debug it too).
 
 As you get more familiar with this, you will see that n-cube Controllers are more powerful than traditional controllers,
 with the added benefits of: scoping your method calls (and rules), dynamic reloading (the code can be refreshed without
