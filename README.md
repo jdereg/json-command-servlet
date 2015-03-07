@@ -89,12 +89,12 @@ tenant and app (at version 0.0.0, SNAPSHOT, HEAD)  will set the version, status,
 
 When calling an n-cube controller from Javascript, the call looks like this:
 
-    var result = call("apollo.getCell", [{'state':'OH'}]);
+    var result = call("apollo.getCell", [{method:'calcPrice', state:'OH'}]);
 
-In this example, the n-cube `apollo`, method `getCell([state:'OH'])` are invoked.  N-Cubes are called this way to allow
-you to have as many rules execute (and scoping) as desired.  You can call into a lookup table (decision table), a
-decision tree (a cube that looks into other cubes, and so on), a rules cube, and a template cube (mail-merge with
-replaceable parts).
+In this example, the n-cube `apollo` is located and method `getCell([method:'calcPrice', state:'OH'])` is invoked.
+N-Cubes are called this way to allow you to have as many rules execute (and scoping) as desired.  You can call into a
+lookup table (decision table), a decision tree (a cube that looks into other cubes, and so on), a rules cube, and a
+template cube (mail-merge with replaceable parts).
 
 Any read-only n-cube method can be called in this manner:
     `containsCell,
@@ -127,12 +127,13 @@ Any read-only n-cube method can be called in this manner:
 See the n-cube documentation for what arguments are required to be passed into these methods.  The most common API to
 call is `getCell(input, output)`, where input and output are Maps.
 
-One common technique for more functional controllers, is to create an n-cube with a String DISCRETE axis.  Each column
- (String) is a method name.  The associated cell is a GroovyExpression that will execute. In order to call one, the
- Javascript code would look like: `call("apollo.getCell", [{'state':'OH'}]);` This will find the n-cube apollo,
- locate the 'state' axis, and execute the cell their.  If it is a simple value, it will be returned.  If the cell is a
- GroovyExpression, it will be executed.  The cell have a URL to your groovy code, allowing you to edit your code in
- your favorite IDE (as well as single step debug it too).
+One common technique for more functional controllers, is to create an n-cube with a String DISCRETE axis named `method`.
+Each column (String) is a method name.  The associated cell is a GroovyExpression that will execute. You can have
+additional scoping axes (as many as you want).  In order to call this one, the Javascript code would look like:
+`call("apollo.getCell", [{method:'calcPrice',state:'OH'}]);` This will find the n-cube apollo, locate the 'method' axis,
+and the `state` axis, then execute cell at that location.  If the cell contains a simple value, it will be returned.
+If the cell is a GroovyExpression, it will be executed.  The cell have a URL to your groovy code, allowing you to edit
+your code in your favorite IDE (as well as single step debug it too).
 
 As you get more familiar with this, you will see that n-cube Controllers are more powerful than traditional controllers,
 with the added benefits of: scoping your method calls (and rules), dynamic reloading (the code can be refreshed without
