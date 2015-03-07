@@ -135,8 +135,8 @@ additional scoping axes (as many as you want).  In order to call this one, the J
 `call("apollo.getCell", [{method:'calcPrice',state:'OH'}]);` This will find the n-cube apollo, locate the 'method' axis
 and select the `calcPrice` column, then locate the `state` axis and `OH` column (or `Default` if `OH` was not there),
 then execute the cell at this location.  If the cell contains a simple value, it will be returned. If the cell is a
-GroovyExpression, it will be executed.  The cell have a URL to your groovy code, allowing you to edit your code in your
-favorite IDE (as well as single step debug it too).
+GroovyExpression, it will be executed.  The cell can have a URL to your groovy code allowing you to edit your code in your
+favorite IDE (as well as single step debug it too), or the code could be 'inline' within the cell.
 
 The image below is an example of what the n-cube controller looks like:
 ![Alt text](https://raw.githubusercontent.com/jdereg/json-command-servlet/master/ncubeScreenShot.png "n-cube Controller")
