@@ -91,52 +91,54 @@ When calling an n-cube controller from Javascript, the call looks like this:
 
     var result = call("apollo.getCell", [{'state':'OH'}]);
 
-In this example, the n-cube 'apollo', method 'getCell([state:'OH'])'.  N-Cubes are called this way to allow you to have
-as many rules execute (and scoping) as desired.  You can call into a lookup table (decision table), a decision tree (a
-cube that looks into other cubes, and so on), a rules cube, and a template cube (mail-merge with replaceable parts).
+In this example, the n-cube 'apollo', method 'getCell([state:'OH'])' are invoked.  N-Cubes are called this way to allow
+you to have as many rules execute (and scoping) as desired.  You can call into a lookup table (decision table), a
+decision tree (a cube that looks into other cubes, and so on), a rules cube, and a template cube (mail-merge with
+replaceable parts).
 
 Any read-only n-cube method can be called in this manner:
-    'containsCell',
-    'containsCellById',
-    'getApplicationID',
-    'getAxes',
-    'getAxis',
-    'getAxisFromColumnId',
-    'getCell',
-    'getCellById',
-    'getCellByIdNoExecute',
-    'getCellMap',
-    'getDefaultCellValue',
-    'getDeltaDescription',
-    'getMap',
-    'getMetaProperties',
-    'getMetaProperty',
-    'getName',
-    'getNumCells',
-    'getNumDimensions',
-    'getOptionalScope',
-    'getReferencedCubeNames',
-    'getRequiredScope',
-    'getRuleInfo',
-    'sha1',
-    'toFormattedJson',
-    'toHtml',
-    'validateCubeName'
+    containsCell,
+    containsCellById,
+    getApplicationID,
+    getAxes,
+    getAxis,
+    getAxisFromColumnId,
+    getCell,
+    getCellById,
+    getCellByIdNoExecute,
+    getCellMap,
+    getDefaultCellValue,
+    getDeltaDescription,
+    getMap,
+    getMetaProperties,
+    getMetaProperty,
+    getName,
+    getNumCells,
+    getNumDimensions,
+    getOptionalScope,
+    getReferencedCubeNames,
+    getRequiredScope,
+    getRuleInfo,
+    sha1,
+    toFormattedJson,
+    toHtml,
+    validateCubeName
 
 See the n-cube documentation for what arguments are required to be passed into these methods.  The most common API to
 call is `getCell(input, output)`, where input and output are Maps.
 
-One common technique for more functional controllers, is to create a rule-cube (Must have at least one Rule axis), and to
-name each rule as you would a method name.  Mark the axis as 'fire once'.  Each rule is just like a method, accessible
-by name.  The `input` map provides the method arguments, and the `output` map allows unlimited outputs from the method
-call.  If the rule cube has additional 'scoping' axes on it (e.g. State), then the method associated to the appropriate
-state would be called.
+One common technique for more functional controllers, is to create an n-cube with a String DISCRETE axis.  Each column
+ (String) is a method name.  The associated cell is a GroovyExpression that will execute. In order to call one, the
+ Javascript code would look like: `call("apollo.getCell", [{'state':'OH'}]);` This will find the n-cube apollo,
+ locate the 'state' axis, and execute the cell their.  If it is a simple value, it will be returned.  If the cell is a
+ GroovyExpression, it will be executed.  The cell have a URL to your groovy code, allowing you to edit your code in
+ your favorite IDE (as well as single step debug it too).
 
 As you get more familiar with this, you will see that n-cube Controllers are more powerful than traditional controllers,
 with the added benefits of: scoping your method calls (and rules), dynamic reloading (the code can be refreshed without
 restarting web server), and the code is kept outside the ".war" file (in the case of Java web apps).
 
-See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/json-io) for an easy way to make Ajax calls 
+See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/json-io) for an easy way to make Ajax calls
 from Javascript.
 
 Version History
