@@ -1,27 +1,24 @@
-package com.cedarsoftware.servlet;
+package com.cedarsoftware.servlet
 
-import com.cedarsoftware.util.Converter;
-import com.cedarsoftware.util.ReflectionUtils;
-import com.cedarsoftware.util.StringUtilities;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
-import com.cedarsoftware.util.io.MetaUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.cedarsoftware.util.Converter
+import com.cedarsoftware.util.ReflectionUtils
+import com.cedarsoftware.util.StringUtilities
+import com.cedarsoftware.util.io.JsonObject
+import com.cedarsoftware.util.io.JsonReader
+import com.cedarsoftware.util.io.MetaUtils
+import groovy.transform.CompileStatic
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 
-import javax.servlet.ServletConfig;
-import javax.servlet.http.HttpServletRequest;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import javax.servlet.ServletConfig
+import javax.servlet.http.HttpServletRequest
+import java.lang.annotation.Annotation
+import java.lang.reflect.Array
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
+import java.util.concurrent.ConcurrentHashMap
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 /**
  * Implement controller provider.  Controllers are named, targetable objects that
@@ -31,7 +28,7 @@ import java.util.regex.Pattern;
  *         <br/>
  *         Copyright (c) Cedar Software LLC
  *         <br/><br/>
- *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         Licensed under the Apache License, Version 2.0 (the "License")
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
  *         <br/><br/>
@@ -43,24 +40,25 @@ import java.util.regex.Pattern;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 abstract class ConfigurationProvider
 {
-    private static final Logger LOG = LogManager.getLogger(ConfigurationProvider.class);
-    private static final Map<String, Method> methodMap = new ConcurrentHashMap<>();
-    private final ServletConfig servletConfig;
-    private static final Pattern cmdUrlPattern = Pattern.compile("^/([^/]+)/([^/]+)(.*)$");	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
+    private static final Logger LOG = LogManager.getLogger(ConfigurationProvider.class)
+    private static final Map<String, Method> methodMap = new ConcurrentHashMap<>()
+    private final ServletConfig servletConfig
+    private static final Pattern cmdUrlPattern = ~'^/([^/]+)/([^/]+)(.*)$'	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
 
     ConfigurationProvider(ServletConfig servletConfig)
     {
-        this.servletConfig = servletConfig;
+        this.servletConfig = servletConfig
     }
 
     ServletConfig getServletConfig()
     {
-        return servletConfig;
+        return servletConfig
     }
 
-    protected abstract Object getController(String name);
+    protected abstract Object getController(String name)
 
     /**
      * Get a regex Matcher that matches the URL String for /context/controller/method
@@ -70,15 +68,15 @@ abstract class ConfigurationProvider
      */
     static Object getUrlMatcher(HttpServletRequest request, String json)
     {
-        Matcher matcher = cmdUrlPattern.matcher(request.getPathInfo());
+        Matcher matcher = cmdUrlPattern.matcher(request.pathInfo)
 
         if (matcher.find() && matcher.groupCount() < 2)
         {
-            String msg = "error: Invalid JSON request - /controller/method not specified: " + json;
-            LOG.warn(msg);
-            return new Envelope(msg, false);
+            String msg = "error: Invalid JSON request - /controller/method not specified: " + json
+            LOG.warn(msg)
+            return new Envelope(msg, false)
         }
-        return matcher;
+        return matcher
     }
 
     /**
@@ -90,77 +88,77 @@ abstract class ConfigurationProvider
      */
     public Envelope callController(HttpServletRequest request, String json)
     {
-        Object var = getUrlMatcher(request, json);
+        Object var = getUrlMatcher(request, json)
         if (var instanceof Envelope)
         {
-            return (Envelope) var;
+            return (Envelope) var
         }
 
-        final Matcher matcher = (Matcher) var;
+        final Matcher matcher = (Matcher) var
 
         // Step 1: Fetch controller instance by name
-        final String controllerName = matcher.group(1);
-        final Object controller = getController(controllerName);
+        final String controllerName = matcher.group(1)
+        final Object controller = getController(controllerName)
         if (controller instanceof Envelope)
         {
-            return (Envelope) controller;
+            return (Envelope) controller
         }
 
         // Step 2: Convert JSON arguments from URL (GET argument or POST body) to Object[]
-        final String methodName = matcher.group(2);
-        Object jArgs = getArguments(json, controllerName, methodName);
+        final String methodName = matcher.group(2)
+        Object jArgs = getArguments(json, controllerName, methodName)
         if (jArgs instanceof Envelope)
         {
-            return (Envelope) jArgs;
+            return (Envelope) jArgs
         }
-        final Object[] args = (Object[]) jArgs;
+        final Object[] args = (Object[]) jArgs
 
         // Step 3: Find and invoke method
         // Wrap the call to the Controller so we can detect any methods that fail to catch exceptions and properly
         // return them as errors.  This separates the errors related to communication from errors related to the
         // Controller throwing an exception.
-        Object result;
-        boolean status = true;
-        long start = System.nanoTime();
+        Object result
+        boolean status = true
+        long start = System.nanoTime()
 
         try
         {
-            final Object method = getMethod(controller, controllerName, methodName, args.length);
+            final Object method = getMethod(controller, controllerName, methodName, args.length)
             if (method instanceof Envelope)
             {
-                return (Envelope) method;
+                return (Envelope) method
             }
-            start = System.nanoTime();  // remove method location from execution time
-            result = callMethod((Method) method, controller, args);
+            start = System.nanoTime()  // remove method location from execution time
+            result = callMethod((Method) method, controller, args)
         }
         catch (ThreadDeath t)
         {
-            throw t;
+            throw t
         }
         catch (Throwable t)
         {
-            t = JsonCommandServlet.getDeepestException(t);
-            String msg = t.getClass().getName();
-            if (t.getMessage() != null)
+            t = JsonCommandServlet.getDeepestException(t)
+            String msg = t.getClass().getName()
+            if (t.message != null)
             {
-                msg += ' ' + t.getMessage();
+                msg += ' ' + t.message
             }
-            LOG.warn("An exception occurred calling '" + controllerName + '.' + methodName + "'", t);
-            result = "error: '" + methodName + "' failed with the following message: " + msg;
-            status = false;
+            LOG.warn("An exception occurred calling '" + controllerName + '.' + methodName + "'", t)
+            result = "error: '" + methodName + "' failed with the following message: " + msg
+            status = false
         }
 
         // Time the Controller call.
-        long end = System.nanoTime();
-        String api = controllerName + '.' + methodName + json;
+        long end = System.nanoTime()
+        String api = controllerName + '.' + methodName + json
 
         if (api.length() > 256)
         {
-            api = api.substring(0, 255);
+            api = api.substring(0, 255)
         }
-        LOG.info(api + ' ' + ((end - start) / 1000000) + " ms");
+        LOG.info(api + ' ' + ((end - start) / 1000000) + " ms")
 
-        return new Envelope(result, status);
+        return new Envelope(result, status)
     }
 
 
@@ -173,29 +171,29 @@ abstract class ConfigurationProvider
      */
     static Object getArguments(String json, String controllerName, String methodName)
     {
-        Object jArgs;
+        Object jArgs
         try
         {
-            jArgs = JsonReader.jsonToJava(json);
+            jArgs = JsonReader.jsonToJava(json)
         }
         catch(Exception e)
         {
-            String errMsg = "error: unable to parse JSON argument list on call '" + controllerName + "." + methodName + "'";
-            LOG.error(errMsg, e);
-            return new Envelope(errMsg, false);
+            String errMsg = "error: unable to parse JSON argument list on call '" + controllerName + "." + methodName + "'"
+            LOG.error(errMsg, e)
+            return new Envelope(errMsg, false)
         }
 
         if (jArgs != null && !(jArgs instanceof Object[]))
         {
-            return new Envelope("error: Arguments must be either null or a JSON array", false);
+            return new Envelope("error: Arguments must be either null or a JSON array", false)
         }
 
         if (LOG.isDebugEnabled())
         {
-            LOG.debug("  " + controllerName + '.' + methodName + '(' + json.substring(1, json.length() - 1) + ')');
+            LOG.debug("  " + controllerName + '.' + methodName + '(' + json.substring(1, json.length() - 1) + ')')
         }
 
-        return jArgs;
+        return jArgs
     }
 
     /**
@@ -211,29 +209,29 @@ abstract class ConfigurationProvider
      */
     private static Object getMethod(Object controller, String controllerName, String methodName, int argCount)
     {
-        String methodKey = controllerName + '.' + methodName + '.' + argCount;
-        Method method = methodMap.get(methodKey);
+        String methodKey = controllerName + '.' + methodName + '.' + argCount
+        Method method = methodMap[methodKey]
         if (method == null)
         {
-            method = getMethod(controller.getClass(), methodName, argCount);
+            method = getMethod(controller.getClass(), methodName, argCount)
             if (method == null)
             {
-                return new Envelope("error: Method not found: " + methodKey, false);
+                return new Envelope("error: Method not found: " + methodKey, false)
             }
 
-            Annotation a = ReflectionUtils.getMethodAnnotation(method, ControllerMethod.class);
+            Annotation a = ReflectionUtils.getMethodAnnotation(method, ControllerMethod.class)
             if (a != null)
             {
-                ControllerMethod cm = (ControllerMethod)a;
+                ControllerMethod cm = (ControllerMethod)a
                 if ("false".equalsIgnoreCase(cm.allow()))
                 {
-                    return new Envelope("error: Method '" + methodName + "' is not allowed to be called via HTTP Request.", false);
+                    return new Envelope("error: Method '" + methodName + "' is not allowed to be called via HTTP Request.", false)
                 }
             }
 
-            methodMap.put(methodKey, method);
+            methodMap[methodKey] = method
         }
-        return method;
+        return method
     }
 
     /**
@@ -245,15 +243,15 @@ abstract class ConfigurationProvider
      */
     private static Method getMethod(Class c, String name, int argc)
     {
-        Method[] methods = c.getMethods();
+        Method[] methods = c.methods
         for (Method method : methods)
         {
-            if (name.equals(method.getName()) && method.getParameterTypes().length == argc)
+            if (name.equals(method.name) && method.parameterTypes.length == argc)
             {
-                return method;
+                return method
             }
         }
-        return null;
+        return null
     }
 
     /**
@@ -267,15 +265,15 @@ abstract class ConfigurationProvider
     {
         try
         {
-            return method.invoke(target, convertArgs(method, args));
+            return method.invoke(target, convertArgs(method, args))
         }
         catch (IllegalAccessException e)
         {
-            throw new RuntimeException(e);
+            throw new RuntimeException(e)
         }
         catch (InvocationTargetException e)
         {
-            throw new RuntimeException(e.getTargetException());
+            throw new RuntimeException(e.targetException)
         }
     }
 
@@ -293,99 +291,99 @@ abstract class ConfigurationProvider
      */
     private static Object[] convertArgs(Method method, Object[] args)
     {
-        Object[] converted = new Object[args.length];
-        Class[] types = method.getParameterTypes();
+        Object[] converted = new Object[args.length]
+        Class[] types = method.parameterTypes
 
         for (int i=0; i < args.length; i++)
         {
             if (args[i] == null)
             {
-                converted[i] = null;
+                converted[i] = null
             }
             else if (args[i] instanceof Class)
             {   // Special handle an argument of type 'Class' because isLogicalPrimitive() is true for Class.
-                converted[i] = args[i];
+                converted[i] = args[i]
             }
             else if (MetaUtils.isLogicalPrimitive(args[i].getClass()))
             {   // Marshal all primitive types, including Date, String (any combination of directions -
                 // String to number, number to String, Date to String, etc.)  See Converter.convert().
-                converted[i] = Converter.convert(args[i], types[i]);
+                converted[i] = Converter.convert(args[i], types[i])
             }
             else if (args[i] instanceof Collection)
             {
                 if (Collection.class.isAssignableFrom(types[i]))
                 {   // easy: Collection to Collection Type
-                    converted[i] = args[i];
+                    converted[i] = args[i]
                 }
                 else if (types[i].isArray())
                 {   // hard: Collection to array type (handles any array type, String[], Object[], Custom[], etc.)
-                    Collection inbound = (Collection)args[i];
-                    converted[i] = arrayBuilder(types[i].getComponentType(), inbound);
+                    Collection inbound = (Collection)args[i]
+                    converted[i] = arrayBuilder(types[i].componentType, inbound)
                 }
                 else
                 {
-                    throw new IllegalArgumentException("Cannot pass Collection into an argument type that is not a Collection or Array[], arg type: " + types[i].getName());
+                    throw new IllegalArgumentException("Cannot pass Collection into an argument type that is not a Collection or Array[], arg type: " + types[i].getName())
                 }
             }
             else if (args[i].getClass().isArray())
             {
                 if (types[i].isArray())
                 {   // easy: array to array
-                    converted[i] = args[i];
+                    converted[i] = args[i]
                 }
                 else if (Collection.class.isAssignableFrom(types[i]))
                 {   // harder: array to collection
                     try
                     {
-                        Collection col = (Collection) JsonReader.newInstance(types[i]);
-                        Collections.addAll(col, args);
+                        Collection col = (Collection) JsonReader.newInstance(types[i])
+                        Collections.addAll(col, args)
                     }
                     catch (Exception e)
                     {
-                        throw new IllegalArgumentException("Could not create Collection instance for type: " + types[i].getName());
+                        throw new IllegalArgumentException("Could not create Collection instance for type: " + types[i].name)
                     }
                 }
                 else
                 {
-                    throw new IllegalArgumentException("Cannot pass Array[] into an argument type that is not a Collection or Array[], arg type: " + types[i].getName());
+                    throw new IllegalArgumentException("Cannot pass Array[] into an argument type that is not a Collection or Array[], arg type: " + types[i].name)
                 }
             }
             else if (args[i] instanceof JsonObject)
             {
-                JsonObject jsonObj = (JsonObject) args[i];
-                Object type = jsonObj.get("@type");
+                JsonObject jsonObj = (JsonObject) args[i]
+                Object type = jsonObj["@type"]
                 if (!(type instanceof String) || !StringUtilities.hasContent((String) type))
                 {
-                    jsonObj.put("@type", types[i].getName());
+                    jsonObj["@type"] = types[i].name
                 }
-                CmdReader reader = new CmdReader();
+                CmdReader reader = new CmdReader()
                 try
                 {
-                    converted[i] = reader.convertParsedMapsToJava(jsonObj);
+                    converted[i] = reader.convertParsedMapsToJava(jsonObj)
                 }
                 catch (Exception e)
                 {
-                    throw new IllegalArgumentException("Unable to convert JSON object to arg type: " + types[i].getName(), e);
+                    throw new IllegalArgumentException("Unable to convert JSON object to arg type: " + types[i].name, e)
                 }
             }
             else if (args[i] instanceof Map)
             {
-                Map map = (Map) args[i];
+                Map map = (Map) args[i]
                 if (Map.class.isAssignableFrom(types[i]))
                 {
-                    converted[i] = map;
+                    converted[i] = map
                 }
                 else
                 {   // Map on input, being set into a non-map type.  Make sure @type gets set correctly.
-                    throw new IllegalArgumentException("Unable to convert Map to arg type: " + types[i].getName());
+                    throw new IllegalArgumentException("Unable to convert Map to arg type: " + types[i].name)
                 }
             }
             else
             {
-                converted[i] = args[i];
+                converted[i] = args[i]
             }
         }
-        return converted;
+        return converted
     }
 
     /**
@@ -397,14 +395,14 @@ abstract class ConfigurationProvider
      */
     public static <T> T[] arrayBuilder(Class<T> classToCastTo, Collection c)
     {
-        T[] array = (T[]) c.toArray((T[]) Array.newInstance(classToCastTo, c.size()));
-        Iterator i = c.iterator();
-        int idx = 0;
+        T[] array = (T[]) c.toArray((T[]) Array.newInstance(classToCastTo, c.size()))
+        Iterator i = c.iterator()
+        int idx = 0
         while (i.hasNext())
         {
-            Array.set(array, idx++, i.next());
+            Array.set(array, idx++ as int, i.next())
         }
-        return array;
+        return array
     }
 
     /**
@@ -414,7 +412,7 @@ abstract class ConfigurationProvider
     {
         public Object convertParsedMapsToJava(JsonObject root)
         {
-            return super.convertParsedMapsToJava(root);
+            return super.convertParsedMapsToJava(root)
         }
     }
 }

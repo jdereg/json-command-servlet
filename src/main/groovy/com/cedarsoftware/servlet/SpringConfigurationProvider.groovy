@@ -1,13 +1,14 @@
-package com.cedarsoftware.servlet;
+package com.cedarsoftware.servlet
 
-import com.cedarsoftware.util.ReflectionUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.context.ApplicationContext;
-import org.springframework.web.context.support.WebApplicationContextUtils;
+import com.cedarsoftware.util.ReflectionUtils
+import groovy.transform.CompileStatic
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
+import org.springframework.context.ApplicationContext
+import org.springframework.web.context.support.WebApplicationContextUtils
 
-import javax.servlet.ServletConfig;
-import java.lang.annotation.Annotation;
+import javax.servlet.ServletConfig
+import java.lang.annotation.Annotation
 
 /**
  * Spring configuration provider for the JsonCommandServlet.  This provider will
@@ -20,7 +21,7 @@ import java.lang.annotation.Annotation;
  *         <br/>
  *         Copyright (c) Cedar Software LLC
  *         <br/><br/>
- *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         Licensed under the Apache License, Version 2.0 (the "License")
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
  *         <br/><br/>
@@ -32,15 +33,16 @@ import java.lang.annotation.Annotation;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class SpringConfigurationProvider extends ConfigurationProvider
 {
-    private static final Logger LOG = LogManager.getLogger(SpringConfigurationProvider.class);
-    private final ApplicationContext springAppCtx;
+    private static final Logger LOG = LogManager.getLogger(SpringConfigurationProvider.class)
+    private final ApplicationContext springAppCtx
 
     SpringConfigurationProvider(ServletConfig servletConfig)
     {
-        super(servletConfig);
-        springAppCtx = WebApplicationContextUtils.getWebApplicationContext(servletConfig.getServletContext());
+        super(servletConfig)
+        springAppCtx = WebApplicationContextUtils.getWebApplicationContext(servletConfig.servletContext)
     }
 
     /**
@@ -52,19 +54,19 @@ class SpringConfigurationProvider extends ConfigurationProvider
     {
         try
         {
-            Object controller = springAppCtx.getBean(name);
-            Class targetType = controller.getClass();
-            Annotation annotation = ReflectionUtils.getClassAnnotation(targetType, ControllerClass.class);
+            Object controller = springAppCtx.getBean(name)
+            Class targetType = controller.getClass()
+            Annotation annotation = ReflectionUtils.getClassAnnotation(targetType, ControllerClass.class)
             if (annotation == null)
             {
-                return new Envelope("error: target '" + controller + "' is not marked as a ControllerClass.", false);
+                return new Envelope("error: target '" + controller + "' is not marked as a ControllerClass.", false)
             }
-            return controller;
+            return controller
         }
         catch(Exception e)
         {
-            LOG.warn("Invalid controller target (not found) : " + name);
-            return new Envelope("error: Invalid target '" + name + "'.", false);
+            LOG.warn("Invalid controller target (not found) : " + name)
+            return new Envelope("error: Invalid target '" + name + "'.", false)
         }
     }
 }

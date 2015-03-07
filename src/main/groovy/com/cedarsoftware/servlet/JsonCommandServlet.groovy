@@ -1,19 +1,16 @@
-package com.cedarsoftware.servlet;
+package com.cedarsoftware.servlet
 
-import com.cedarsoftware.util.IOUtilities;
-import com.cedarsoftware.util.io.JsonWriter;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.cedarsoftware.util.IOUtilities
+import com.cedarsoftware.util.io.JsonWriter
+import groovy.transform.CompileStatic
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.security.AccessControlException;
-import java.util.regex.Matcher;
+import javax.servlet.http.HttpServlet
+import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
+import java.security.AccessControlException
+import java.util.regex.Matcher
 
 /**
  * This class will accept JSON REST requests, find the named Spring Bean,
@@ -52,7 +49,7 @@ import java.util.regex.Matcher;
  *         <br/>
  *         Copyright (c) Cedar Software LLC
  *         <br/><br/>
- *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         Licensed under the Apache License, Version 2.0 (the "License")
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
  *         <br/><br/>
@@ -64,26 +61,27 @@ import java.util.regex.Matcher;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 public class JsonCommandServlet extends HttpServlet
 {
-    public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<>();
-    public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>();
-    public static final String ATTRIBUTE_STATUS = "status";
-    public static final String ATTRIBUTE_FAIL_MESSAGE = "failMsg";
-    private SpringConfigurationProvider springCfgProvider;
-    private NCubeConfigurationProvider nCubeCfgProvider;
-    private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class);
+    public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<>()
+    public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>()
+    public static final String ATTRIBUTE_STATUS = "status"
+    public static final String ATTRIBUTE_FAIL_MESSAGE = "failMsg"
+    private SpringConfigurationProvider springCfgProvider
+    private NCubeConfigurationProvider nCubeCfgProvider
+    private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class)
 
     public void init()
     {
         try
         {
-            nCubeCfgProvider = new NCubeConfigurationProvider(getServletConfig());
-            springCfgProvider = new SpringConfigurationProvider(getServletConfig());
+            nCubeCfgProvider = new NCubeConfigurationProvider(getServletConfig())
+            springCfgProvider = new SpringConfigurationProvider(getServletConfig())
         }
         catch (Exception e)
         {
-            LOG.error("Error initializing app context", e);
+            LOG.error("Error initializing app context", e)
         }
     }
 
@@ -96,29 +94,29 @@ public class JsonCommandServlet extends HttpServlet
     {
         try
         {
-            request.setAttribute(ATTRIBUTE_STATUS, true);  // start with status of true
-            servletRequest.set(request);       // store on ThreadLocal
-            servletResponse.set(response);     // store on ThreadLocal
+            request.setAttribute(ATTRIBUTE_STATUS, true)  // start with status of true
+            servletRequest.set(request)       // store on ThreadLocal
+            servletResponse.set(response)     // store on ThreadLocal
 
             // Step 1: Ensure that the request header has Content-Length correctly specified.
-            String json = request.getParameter("json");
+            String json = request.getParameter("json")
 
             if (json == null || json.trim().length() < 1)
             {
-                sendJsonResponse(request, response, new Envelope("error: HTTP-GET had empty or no 'json' parameter.", false));
-                return;
+                sendJsonResponse(request, response, new Envelope("error: HTTP-GET had empty or no 'json' parameter.", false))
+                return
             }
 
             if (LOG.isDebugEnabled())
             {
-                LOG.debug("GET RESTful JSON");
+                LOG.debug("GET RESTful JSON")
             }
 
-            handleRequestAndResponse(request, response, json);
+            handleRequestAndResponse(request, response, json)
         }
         finally
         {
-            removeThreadLocals();
+            removeThreadLocals()
         }
     }
 
@@ -130,37 +128,37 @@ public class JsonCommandServlet extends HttpServlet
      */
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
     {
-        request.setAttribute(ATTRIBUTE_STATUS, true);   // start with status of true
-        servletRequest.set(request);        // store on ThreadLocal
-        servletResponse.set(response);      // store on ThreadLocal
+        request.setAttribute(ATTRIBUTE_STATUS, true)   // start with status of true
+        servletRequest.set(request)        // store on ThreadLocal
+        servletResponse.set(response)      // store on ThreadLocal
 
         try
         {
             // Ensure that the request header has Content-Length correctly specified.
-            if (request.getContentLength() < 1)
+            if (request.contentLength < 1)
             {
-                sendJsonResponse(request, response, new Envelope("error: Call to server had incorrect Content-Length specified.", false));
-                return;
+                sendJsonResponse(request, response, new Envelope("error: Call to server had incorrect Content-Length specified.", false))
+                return
             }
 
             // Transfer request body to byte[]
-            byte[] jsonBytes = new byte[request.getContentLength()];
-            IOUtilities.transfer(request.getInputStream(), jsonBytes);
-            String json = new String(jsonBytes, "UTF-8");
+            byte[] jsonBytes = new byte[request.contentLength]
+            IOUtilities.transfer(request.inputStream, jsonBytes)
+            String json = new String(jsonBytes, "UTF-8")
 
             if (LOG.isDebugEnabled())
             {
-                LOG.debug("POST RESTful JSON");
+                LOG.debug("POST RESTful JSON")
             }
-            handleRequestAndResponse(request, response, json);
+            handleRequestAndResponse(request, response, json)
         }
         catch (Exception e)
         {
-            sendJsonResponse(request, response, new Envelope("error: Unable to read HTTP-POST JSON content.", false));
+            sendJsonResponse(request, response, new Envelope("error: Unable to read HTTP-POST JSON content.", false))
         }
         finally
         {
-            removeThreadLocals();
+            removeThreadLocals()
         }
     }
 
@@ -170,8 +168,8 @@ public class JsonCommandServlet extends HttpServlet
      */
     private static void removeThreadLocals()
     {
-        servletRequest.remove();
-        servletResponse.remove();
+        servletRequest.remove()
+        servletResponse.remove()
     }
 
     /**
@@ -185,23 +183,23 @@ public class JsonCommandServlet extends HttpServlet
      */
     private Object getProvider(HttpServletRequest request, String json)
     {
-        Object var = ConfigurationProvider.getUrlMatcher(request, json);
+        Object var = ConfigurationProvider.getUrlMatcher(request, json)
         if (var instanceof Envelope)
         {   // Bad controller name or missing method, etc. within the URL String
-            return var;
+            return var
         }
 
-        final String controllerName = ((Matcher) var).group(1);
+        final String controllerName = ((Matcher) var).group(1)
 
-        var = nCubeCfgProvider.getController(controllerName);
+        var = nCubeCfgProvider.getController(controllerName)
         if (var instanceof Envelope)
         {
-            var = springCfgProvider.getController(controllerName);
-            return var instanceof Envelope ? var : springCfgProvider;
+            var = springCfgProvider.getController(controllerName)
+            return var instanceof Envelope ? var : springCfgProvider
         }
         else
         {
-            return nCubeCfgProvider;
+            return nCubeCfgProvider
         }
     }
 
@@ -215,71 +213,71 @@ public class JsonCommandServlet extends HttpServlet
      */
     private void handleRequestAndResponse(HttpServletRequest request, HttpServletResponse response, String json)
     {
-        Object envelope;
+        Object envelope
         try
         {
-            Object provider = getProvider(request, json);
+            Object provider = getProvider(request, json)
             if (provider instanceof Envelope)
             {
-                envelope = provider;
+                envelope = provider
             }
             else
             {
-                ConfigurationProvider cfgProvider = (ConfigurationProvider) provider;
-                envelope = cfgProvider.callController(request, json);
+                ConfigurationProvider cfgProvider = (ConfigurationProvider) provider
+                envelope = cfgProvider.callController(request, json)
             }
         }
         catch (ThreadDeath d)
         {
-            throw d;
+            throw d
         }
         catch (Throwable e)
         {
             // Handle response in case of unhandled exception by controller
-            Throwable t = getDeepestException(e);
-            String msg = t.getClass().getName();
-            if (t.getMessage() != null)
+            Throwable t = getDeepestException(e)
+            String msg = t.getClass().getName()
+            if (t.message != null)
             {
-                msg += ' ' + t.getMessage();
+                msg += ' ' + t.message
             }
 
             if (t instanceof IOException)
             {
                 if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().getName()))
                 {
-                    LOG.info("Client aborted connection while processing JSON request.");
+                    LOG.info("Client aborted connection while processing JSON request.")
                 }
                 else
                 {
-                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request made.", false));
+                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request made.", false))
                 }
             }
             else if (t instanceof AccessControlException)
             {
-                sendJsonResponse(request, response, new Envelope("error: Your session with our website appears to have ended.  Please log out and back in.", false));
+                sendJsonResponse(request, response, new Envelope("error: Your session with our website appears to have ended.  Please log out and back in.", false))
             }
             else
             {
-                sendJsonResponse(request, response, new Envelope("error: Communications issue between your computer and our website (" + msg + ')', false));
+                sendJsonResponse(request, response, new Envelope("error: Communications issue between your computer and our website (" + msg + ')', false))
             }
-            return;
+            return
         }
 
         // Handle response (if the method did not)
         if (!response.isCommitted())
         {
 	        // Send JSON result
-	        long start = System.nanoTime();
-	        sendJsonResponse(request, response, (Envelope) envelope);
-	        long end = System.nanoTime();
+	        long start = System.nanoTime()
+	        sendJsonResponse(request, response, (Envelope) envelope)
+	        long end = System.nanoTime()
 
 	        if (end - start > 2000000000)
 	        {    // Total time more than 2 seconds
 	            if (json.length() > 256)
 	            {
-	                json = json.substring(0, 255);
+	                json = json.substring(0, 255)
 	            }
-	            LOG.info("Slow return response: " + json + " took " + ((end - start) / 1000000) + " ms");
+	            LOG.info("Slow return response: " + json + " took " + ((end - start) / 1000000) + " ms")
 	        }
         }
     }
@@ -296,42 +294,42 @@ public class JsonCommandServlet extends HttpServlet
         {
             if (response.isCommitted())
             {   // Cannot write, response has already been committed.
-                return;
+                return
             }
-            String json = buildResponse(request, response, envelope);
-            writeResponse(request, response, json);
+            String json = buildResponse(request, response, envelope)
+            writeResponse(request, response, json)
         }
         catch (ThreadDeath t)
         {
-            throw t;
+            throw t
         }
         catch (Throwable t)
         {
-            t = getDeepestException(t);
-            String msg = t.getClass().getName();
+            t = getDeepestException(t)
+            String msg = t.getClass().getName()
             if (t.getMessage() != null)
             {
-                msg += ' ' + t.getMessage();
+                msg += ' ' + t.getMessage()
             }
 
             if (t instanceof IOException)
             {
                 if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().getName()))
                 {
-                    LOG.info("Client aborted connection while processing JSON request.");
+                    LOG.info("Client aborted connection while processing JSON request.")
                 }
                 else
                 {
-                    LOG.warn("IOException - sending response: " + msg);
+                    LOG.warn("IOException - sending response: " + msg)
                 }
             }
             else if (t instanceof AccessControlException)
             {
-                LOG.warn("AccessControlException - sending response: " + msg);
+                LOG.warn("AccessControlException - sending response: " + msg)
             }
             else
             {
-                LOG.warn("An unexpected exception occurred sending JSON response to client", t);
+                LOG.warn("An unexpected exception occurred sending JSON response to client", t)
             }
         }
     }
@@ -345,34 +343,34 @@ public class JsonCommandServlet extends HttpServlet
      */
     private static void writeResponse(HttpServletRequest request, HttpServletResponse response, String json) throws IOException
     {
-        ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream();
-        jsonBytes.write(json.getBytes("UTF-8"));
+        ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream()
+        jsonBytes.write(json.getBytes("UTF-8"))
 
         // For debugging
         if (LOG.isDebugEnabled())
         {
-            LOG.debug("  return " + new String(jsonBytes.toByteArray(), "UTF-8"));
+            LOG.debug("  return " + new String(jsonBytes.toByteArray(), "UTF-8"))
         }
 
         //  Header can be null coming from other WebClients (such as .NET client)
-        String header = request.getHeader("Accept-Encoding");
+        String header = request.getHeader("Accept-Encoding")
         if (jsonBytes.size() > 512 && header != null && header.contains("gzip"))
         {   // Only compress if the output is longer than 512 bytes.
 
-            ByteArrayOutputStream compressedBytes = new ByteArrayOutputStream(jsonBytes.size());
-            IOUtilities.compressBytes(jsonBytes, compressedBytes);
+            ByteArrayOutputStream compressedBytes = new ByteArrayOutputStream(jsonBytes.size())
+            IOUtilities.compressBytes(jsonBytes, compressedBytes)
 
             if (compressedBytes.size() < jsonBytes.size())
             {   // Only write compressed if it is smaller than original JSON String
-                response.setHeader("Content-Encoding", "gzip");
-                jsonBytes = compressedBytes;
+                response.setHeader("Content-Encoding", "gzip")
+                jsonBytes = compressedBytes
             }
         }
 
-        response.setContentLength(jsonBytes.size());
-        OutputStream output = new BufferedOutputStream(response.getOutputStream());
-        jsonBytes.writeTo(output);
-        output.flush();
+        response.contentLength = jsonBytes.size()
+        OutputStream output = new BufferedOutputStream(response.outputStream)
+        jsonBytes.writeTo(output)
+        output.flush()
     }
 
     /**
@@ -384,40 +382,40 @@ public class JsonCommandServlet extends HttpServlet
      */
     private static String buildResponse(HttpServletRequest request, HttpServletResponse response, Envelope envelope)
     {
-        Boolean success = (Boolean) request.getAttribute(ATTRIBUTE_STATUS);
+        Boolean success = (Boolean) request.getAttribute(ATTRIBUTE_STATUS)
         if (!success)
         {   // If the called method forcefully set status to false, then overwrite the data with the
             // value from the ATTRIBUTE_FAIL_MESSAGE (which will contain the failure reason).
-            envelope.data = request.getAttribute(ATTRIBUTE_FAIL_MESSAGE);
+            envelope.data = request.getAttribute(ATTRIBUTE_FAIL_MESSAGE)
         }
-        response.setContentType("application/json");
-        response.setHeader("Cache-Control", "private, no-cache, no-store");
+        response.contentType = "application/json"
+        response.setHeader("Cache-Control", "private, no-cache, no-store")
 
         // Temporarily wrap return type in Object[] to shrink the return type in JSON format
-        String retJson = JsonWriter.objectToJson(new Object[]{envelope.data});
-        StringBuilder s = new StringBuilder("{\"data\":");
+        String retJson = JsonWriter.objectToJson([envelope.data] as Object[])
+        StringBuilder s = new StringBuilder("{\"data\":")
 
         // Now pull off the Object[] wrapper.
         if ("[]".equals(retJson))
         {
-            s.append("null");
+            s.append("null")
         }
         else
         {
-            s.append(retJson.substring(1, retJson.length() - 1));
+            s.append(retJson.substring(1, retJson.length() - 1))
         }
 
-        s.append(",\"status\":");
+        s.append(",\"status\":")
         if (!success)
         {   // Servlet handler (invoked method) can force the status to null
-            s.append(false);
+            s.append(false)
         }
         else
         {
-            s.append(envelope.status);
+            s.append(envelope.status)
         }
-        s.append('}');
-        return s.toString();
+        s.append('}')
+        return s.toString()
     }
 
     /**
@@ -427,26 +425,26 @@ public class JsonCommandServlet extends HttpServlet
      */
     static Throwable getDeepestException(Throwable e)
     {
-        while (e.getCause() != null)
+        while (e.cause != null)
         {
-            e = e.getCause();
+            e = e.cause
         }
 
         if (!(e instanceof AccessControlException || e instanceof IOException))
         {
-            LOG.warn("unexpected exception occurred: ", e);
+            LOG.warn("unexpected exception occurred: ", e)
         }
         else
         {
-            String msg = e.getClass().getName();
-            if (e.getMessage() != null)
+            String msg = e.getClass().getName()
+            if (e.message != null)
             {
-                msg = msg + ' ' + e.getMessage();
+                msg = msg + ' ' + e.message
             }
 
-            LOG.warn("exception occurred: " + msg);
+            LOG.warn("exception occurred: " + msg)
         }
 
-        return e;
+        return e
     }
 }

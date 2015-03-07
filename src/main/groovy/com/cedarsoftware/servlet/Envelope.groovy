@@ -1,10 +1,6 @@
-package com.cedarsoftware.servlet;
+package com.cedarsoftware.servlet
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import groovy.transform.CompileStatic
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -23,9 +19,15 @@ import java.lang.annotation.Target;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-@Inherited
-public @interface ControllerClass
+@CompileStatic
+class Envelope
 {
+    Object data
+    final boolean status
+
+    public Envelope(Object data, boolean status)
+    {
+        this.data = data
+        this.status = status
+    }
 }

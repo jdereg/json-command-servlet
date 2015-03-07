@@ -1,20 +1,20 @@
-package com.cedarsoftware.servlet;
+package com.cedarsoftware.servlet
 
-import com.cedarsoftware.ncube.ApplicationID;
-import com.cedarsoftware.ncube.NCube;
-import com.cedarsoftware.ncube.NCubeManager;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.cedarsoftware.ncube.ApplicationID
+import com.cedarsoftware.ncube.NCube
+import com.cedarsoftware.ncube.NCubeManager
+import groovy.transform.CompileStatic
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 
-import javax.servlet.ServletConfig;
-import java.util.HashMap;
+import javax.servlet.ServletConfig
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br/>
  *         Copyright (c) Cedar Software LLC
  *         <br/><br/>
- *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         Licensed under the Apache License, Version 2.0 (the "License")
  *         you may not use this file except in compliance with the License.
  *         You may obtain a copy of the License at
  *         <br/><br/>
@@ -26,19 +26,20 @@ import java.util.HashMap;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@CompileStatic
 class NCubeConfigurationProvider extends ConfigurationProvider
 {
-    private static final Logger LOG = LogManager.getLogger(NCubeConfigurationProvider.class);
-    private final ApplicationID appId;
+    private static final Logger LOG = LogManager.getLogger(NCubeConfigurationProvider.class)
+    private final ApplicationID appId
 
     NCubeConfigurationProvider(ServletConfig servletConfig)
     {
-        super(servletConfig);
-        String tenant = getServletConfig().getInitParameter("tenant");
-        ApplicationID.validateTenant(tenant);
-        String app = getServletConfig().getInitParameter("app");
-        ApplicationID.validateApp(app);
-        appId = NCubeManager.getApplicationID(tenant, app, new HashMap());
+        super(servletConfig)
+        String tenant = getServletConfig().getInitParameter("tenant")
+        ApplicationID.validateTenant(tenant)
+        String app = getServletConfig().getInitParameter("app")
+        ApplicationID.validateApp(app)
+        appId = NCubeManager.getApplicationID(tenant, app, new HashMap())
     }
 
     /**
@@ -50,17 +51,17 @@ class NCubeConfigurationProvider extends ConfigurationProvider
     {
         try
         {
-            NCube ncube = NCubeManager.getCube(appId, cubeName);
+            NCube ncube = NCubeManager.getCube(appId, cubeName)
             if (ncube == null)
             {
-                return new Envelope("error: Invalid target '" + cubeName + "'.", false);
+                return new Envelope("error: Invalid target '" + cubeName + "'.", false)
             }
-            return ncube;
+            return ncube
         }
         catch(Exception e)
         {
-            LOG.warn("Invalid controller target (not found) : " + cubeName);
-            return new Envelope("error: Invalid target '" + cubeName + "'.", false);
+            LOG.warn("Invalid controller target (not found) : " + cubeName)
+            return new Envelope("error: Invalid target '" + cubeName + "'.", false)
         }
     }
 }

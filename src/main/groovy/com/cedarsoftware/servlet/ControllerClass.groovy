@@ -1,4 +1,10 @@
-package com.cedarsoftware.servlet;
+package com.cedarsoftware.servlet
+
+import java.lang.annotation.ElementType
+import java.lang.annotation.Inherited
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
 /**
  * @author John DeRegnaucourt (jdereg@gmail.com)
@@ -17,14 +23,8 @@ package com.cedarsoftware.servlet;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class Envelope
-{
-    Object data;
-    final boolean status;
-
-    public Envelope(Object data, boolean status)
-    {
-        this.data = data;
-        this.status = status;
-    }
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Inherited
+public @interface ControllerClass {
 }
