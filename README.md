@@ -133,8 +133,8 @@ One common technique for more functional controllers, is to create an n-cube wit
 Each column (String) is a method name.  The associated cell is a GroovyExpression that will execute. You can have
 additional scoping axes (as many as you want).  In order to call this one, the Javascript code would look like:
 `call("apollo.getCell", [{method:'calcPrice',state:'OH'}]);` This will find the n-cube apollo, locate the 'method' axis
-and select the `calcPrice` column, then locate the `state` axis locating the `OH` column (or Default if OH was not on
-there), then execute cell at that location.  If the cell contains a simple value, it will be returned. If the cell is a
+and select the `calcPrice` column, then locate the `state` axis and `OH` column (or `Default` if `OH` was not there),
+then execute the cell at this location.  If the cell contains a simple value, it will be returned. If the cell is a
 GroovyExpression, it will be executed.  The cell have a URL to your groovy code, allowing you to edit your code in your
 favorite IDE (as well as single step debug it too).
 
@@ -147,7 +147,7 @@ note that there are only 3 state columns.  These do special pricing calculations
 states are picked up automatically by the 'Default' column on the state axis.
 
 As you get more familiar with this, you will see that n-cube Controllers are more powerful than traditional controllers,
-with the added benefits of: scoping your method calls (and rules), dynamic reloading (the code can be refreshed without
+with the added benefits of scoping your method calls (and rules), dynamic reloading (the code can be refreshed without
 restarting web server), and the code is kept outside the ".war" file (in the case of Java web apps).
 
 See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/json-io) for an easy way to make Ajax calls
