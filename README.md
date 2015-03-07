@@ -7,7 +7,7 @@ To include in your project:
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-command-servlet</artifactId>
-  <version>1.2.0</version>
+  <version>1.2.2</version>
 </dependency>
 ```
 <a class="coinbase-button" data-code="085e7852d6f8c97474d5a8d74307a49f" data-button-style="custom_large" data-custom="json-command-servlet" href="https://coinbase.com/checkouts/085e7852d6f8c97474d5a8d74307a49f">Feed hungry developers...</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
@@ -27,7 +27,7 @@ where:
 
 The method will be called, and then the return value from the method will be written in JSON format, like this:
 
-{"status":true,"result": [result value in JSON]}   # Result not in array brackets unless result is array
+{"status":true,"data": [result value in JSON]}   # Result not in array brackets unless result is array
 
 where 'status' is true if the method called returned without exception, otherwise 'status' is false.  The 'result'
 is the JSON string-ified version of the method's return value.  If the method throws an exception, the exception
@@ -56,6 +56,87 @@ HttpServletResponse object, and then use the response object set HTTP Response h
 write to.  You may be wondering, how do I prevent the JsonCommandServlet from writing a JSON standard response object
 instead of the streamed data?  The JsonCommandServlet will detect that the output stream has been written to, and
 will not write the standard return (JSON) envelope.
+
+N-Cube
+======
+N-Cubes can be used as Controllers. To do so, make sure you set the 'tenant' value and 'app' value as init-params within
+the web.xml configuration:
+
+    <servlet>
+        <description>JSON Servlet</description>
+        <display-name>jsonServlet</display-name>
+        <servlet-name>jsonServlet</servlet-name>
+        <servlet-class>com.cedarsoftware.servlet.JsonCommandServlet</servlet-class>
+        <init-param>
+            <param-name>tenant</param-name>
+            <param-value>Quasar</param-value>
+        </init-param>
+        <init-param>
+            <param-name>app</param-name>
+            <param-value>Pricing</param-value>
+        </init-param>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>jsonServlet</servlet-name>
+        <url-pattern>/cmd/*</url-pattern>
+    </servlet-mapping>
+
+In the example above, the tenant is set to 'Quasar' and app is set to 'Pricing'.  The sys.bootstrap n-cube for this
+tenant and app (at version 0.0.0, SNAPSHOT, HEAD)  will set the version, status, and branch.  This is done by returning
+`new ApplicationID('Quasar', 'Pricing', '1.7.0', 'SNAPSHOT', 'HEAD')` from the sys.bootstrap cube.
+
+When calling an n-cube controller from Javascript, the call looks like this:
+
+    var result = call("apollo.getCell", [{'state':'OH'}]);
+
+In this example, the n-cube 'apollo', method 'getCell([state:'OH'])'.  N-Cubes are called this way to allow you to have
+as many rules execute (and scoping) as desired.  You can call into a lookup table (decision table), a decision tree (a
+cube that looks into other cubes, and so on), a rules cube, and a template cube (mail-merge with replaceable parts).
+
+Any read-only n-cube method can be called in this manner:
+    'containsCell',
+    'containsCellById',
+    'getApplicationID',
+    'getAxes',
+    'getAxis',
+    'getAxisFromColumnId',
+    'getCell',
+    'getCellById',
+    'getCellByIdNoExecute',
+    'getCellMap',
+    'getDefaultCellValue',
+    'getDeltaDescription',
+    'getMap',
+    'getMetaProperties',
+    'getMetaProperty',
+    'getName',
+    'getNumCells',
+    'getNumDimensions',
+    'getOptionalScope',
+    'getReferencedCubeNames',
+    'getRequiredScope',
+    'getRuleInfo',
+    'sha1',
+    'toFormattedJson',
+    'toHtml',
+    'validateCubeName'
+
+See the n-cube documentation for what arguments are required to be passed into these methods.  The most common API to
+call is `getCell(input, output)`, where input and output are Maps.
+
+One common technique for more functional controllers, is to create a rule-cube (Must have at least one Rule axis), and to
+name each rule as you would a method name.  Mark the axis as 'fire once'.  Each rule is just like a method, accessible
+by name.  The `input` map provides the method arguments, and the `output` map allows unlimited outputs from the method
+call.  If the rule cube has additional 'scoping' axes on it (e.g. State), then the method associated to the appropriate
+state would be called.
+
+As you get more familiar with this, you will see that n-cube Controllers are more powerful than traditional controllers,
+with the added benefits of: scoping your method calls (and rules), dynamic reloading (the code can be refreshed without
+restarting web server), and the code is kept outside the ".war" file (in the case of Java web apps).
+
+See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/json-io) for an easy way to make Ajax calls 
+from Javascript.
 
 Version History
 * 1.2.2

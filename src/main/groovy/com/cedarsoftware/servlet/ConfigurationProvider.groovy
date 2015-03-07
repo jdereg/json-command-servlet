@@ -174,7 +174,7 @@ abstract class ConfigurationProvider
 
         // Time the Controller call.
         long end = System.nanoTime()
-        String api = getLogPrefix() + ':' + controllerName + '.' + methodName + json
+        String api = logPrefix + ':' + controllerName + '.' + methodName + json
 
         if (api.length() > 256)
         {
