@@ -1,16 +1,6 @@
 package com.cedarsoftware.servlet;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 /**
- * Place this annotation on any Controller method
- * that will manage the HTTP Response directly.  This
- * annotation tells the JsonCommandServlet to avoid
- * sending a response to the client.
- *
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br/>
  *         Copyright (c) Cedar Software LLC
@@ -27,8 +17,14 @@ import java.lang.annotation.Target;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface HttpResponseHandler
+public class Envelope
 {
+    Object data;
+    boolean status;
+
+    public Envelope(Object data, boolean status)
+    {
+        this.data = data;
+        this.status = status;
+    }
 }

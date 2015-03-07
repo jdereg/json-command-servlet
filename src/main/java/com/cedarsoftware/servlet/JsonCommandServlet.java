@@ -1,12 +1,6 @@
 package com.cedarsoftware.servlet;
 
-import com.cedarsoftware.servlet.framework.driver.ServletCtxProvider;
-import com.cedarsoftware.util.Converter;
 import com.cedarsoftware.util.IOUtilities;
-import com.cedarsoftware.util.ReflectionUtils;
-import com.cedarsoftware.util.StringUtilities;
-import com.cedarsoftware.util.io.JsonObject;
-import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.JsonWriter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,18 +12,7 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.security.AccessControlException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * This class will accept JSON REST requests, find the named Spring Bean,
@@ -46,7 +29,7 @@ import java.util.regex.Pattern;
  *
  * When calling the JsonServlet, it will always return an object in the form:
  *
- *     {"value":v,"status":false|true|null}
+ *     {"data":v,"status":false|true|null}
  *
  * where the value 'v' is the return value of the Controller method called.
  * The status is 'true' if the method call properly succeeded.  Use the
@@ -79,24 +62,34 @@ import java.util.regex.Pattern;
  *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
-
  */
 public class JsonCommandServlet extends HttpServlet
 {
-    private AppCtx appCtx;
-    private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class);
-    private static final Map<String, Method> methodMap = new ConcurrentHashMap<>();
-    private static Pattern cmdUrlPattern = Pattern.compile("^/([^/]+)/([^/]+)(.*)$");	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
-    public static final String ATTRIBUTE_STATUS = "status";
-    public static final String ATTRIBUTE_FAIL_MESSAGE = "failMsg";
     public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<>();
     public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>();
+    public static final String ATTRIBUTE_STATUS = "status";
+    public static final String ATTRIBUTE_FAIL_MESSAGE = "failMsg";
+    public static final String FRAMEWORK = "framework";
+    private ConfigurationProvider cfgProvider;
+    private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class);
 
     public void init()
     {
         try
         {
-            appCtx = ServletCtxProvider.getAppCtx(getServletContext());
+            String framework = getServletConfig().getInitParameter(FRAMEWORK);
+            if ("ncube".equalsIgnoreCase(framework) || "n-cube".equalsIgnoreCase(framework))
+            {
+                cfgProvider = new NCubeConfigurationProvider(getServletConfig());
+            }
+            else if ("spring".equalsIgnoreCase(framework))
+            {
+                cfgProvider = new SpringConfigurationProvider(getServletConfig());
+            }
+            else
+            {
+                throw new IllegalArgumentException("web.xml missing 'framework' init-param for JsonCommandServlet.  Set this to 'ncube' or 'spring' depending on where your controllers are configured.");
+            }
         }
         catch (Exception e)
         {
@@ -107,85 +100,97 @@ public class JsonCommandServlet extends HttpServlet
     /**
      * Handle JSON GET style request.  In this case, 'controller', 'method', and 'json' are
      * specified as URL parameters.
+     * Example: http://cedarsoftware.com/coolApp/CoolController/coolMethod?json=[args...]
      */
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
     {
-        request.setAttribute(ATTRIBUTE_STATUS, true);
-        servletRequest.set(request);
-        servletResponse.set(response);
-        // Step 1: Ensure that the request header has Content-Length correctly specified.
-        String json = request.getParameter("json");
-
-        if (json == null || json.trim().length() < 1)
+        try
         {
-            sendJsonResponse(request, response, new Object[] {"error: HTTP-GET had empty or no 'json' parameter.", false});
+            request.setAttribute(ATTRIBUTE_STATUS, true);  // start with status of true
+            servletRequest.set(request);       // store on ThreadLocal
+            servletResponse.set(response);     // store on ThreadLocal
+
+            // Step 1: Ensure that the request header has Content-Length correctly specified.
+            String json = request.getParameter("json");
+
+            if (json == null || json.trim().length() < 1)
+            {
+                sendJsonResponse(request, response, new Envelope("error: HTTP-GET had empty or no 'json' parameter.", false));
+                return;
+            }
+
+            if (LOG.isDebugEnabled())
+            {
+                LOG.debug("GET RESTful JSON");
+            }
+
+            handleRequestAndResponse(request, response, json);
+        }
+        finally
+        {
             removeThreadLocals();
-            return;
         }
-
-        if (LOG.isDebugEnabled())
-        {
-            LOG.debug("GET RESTful JSON");
-        }
-
-        processJsonRequest(request, response, json);
-        removeThreadLocals();
     }
 
     /**
      * Process JSON POST style where the controller, method, and arguments are passed in as the
      * POST data.
+     * Example: http://cedarsoftware.com/coolApp/CoolController/coolMethod
+     * Post body contains the arguments in JSON format.
      */
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
     {
-        request.setAttribute(ATTRIBUTE_STATUS, true);
-        servletRequest.set(request);
-        servletResponse.set(response);
-        // Ensure that the request header has Content-Length correctly specified.
-        if (request.getContentLength() < 1)
-        {
-            sendJsonResponse(request, response, new Object[] {"error: Call to server had incorrect Content-Length specified.", false});
-            removeThreadLocals();
-            return;
-        }
+        request.setAttribute(ATTRIBUTE_STATUS, true);   // start with status of true
+        servletRequest.set(request);        // store on ThreadLocal
+        servletResponse.set(response);      // store on ThreadLocal
 
-        String json;
         try
         {
+            // Ensure that the request header has Content-Length correctly specified.
+            if (request.getContentLength() < 1)
+            {
+                sendJsonResponse(request, response, new Envelope("error: Call to server had incorrect Content-Length specified.", false));
+                return;
+            }
+
+            // Transfer request body to byte[]
             byte[] jsonBytes = new byte[request.getContentLength()];
             IOUtilities.transfer(request.getInputStream(), jsonBytes);
-            json = new String(jsonBytes, "UTF-8");
+            String json = new String(jsonBytes, "UTF-8");
 
             if (LOG.isDebugEnabled())
             {
                 LOG.debug("POST RESTful JSON");
             }
-            processJsonRequest(request, response, json);
+            handleRequestAndResponse(request, response, json);
         }
-        catch(Exception e)
+        catch (Exception e)
         {
-            sendJsonResponse(request, response, new Object[] {"error: Unable to read HTTP-POST JSON content.", false});
+            sendJsonResponse(request, response, new Envelope("error: Unable to read HTTP-POST JSON content.", false));
         }
-        removeThreadLocals();
+        finally
+        {
+            removeThreadLocals();
+        }
     }
 
+    /**
+     * Remove ThreadLocals containing HttpServletRequest and response so that when thread is returned
+     * to threadpool there are no lingering references to these values.
+     */
     private static void removeThreadLocals()
     {
         servletRequest.remove();
         servletResponse.remove();
     }
 
-    private void processJsonRequest(HttpServletRequest request, HttpServletResponse response, String json)
+    private void handleRequestAndResponse(HttpServletRequest request, HttpServletResponse response, String json)
     {
-        Object[] ret;
-        boolean methodHandledResponse;
+        Envelope envelope;
         try
         {
-            // ret[0] is controller return value
-            // ret[1] true if successful, false if exception occurred.
-        	// ret[2] true if the method wrote the HTTP response, false otherwise
-            ret = makeJsonCall(request, response, json);
-            methodHandledResponse = (Boolean) ret[2];
+            // Handling request = making the call
+            envelope = cfgProvider.callController(request, json);
         }
         catch (ThreadDeath d)
         {
@@ -193,6 +198,7 @@ public class JsonCommandServlet extends HttpServlet
         }
         catch (Throwable e)
         {
+            // Handle response in case of unhandled exception by controller
             Throwable t = getDeepestException(e);
             String msg = t.getClass().getName();
             if (t.getMessage() != null)
@@ -208,25 +214,26 @@ public class JsonCommandServlet extends HttpServlet
                 }
                 else
                 {
-                    sendJsonResponse(request, response, new Object[]{"error: Invalid JSON request made.", false});
+                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request made.", false));
                 }
             }
             else if (t instanceof AccessControlException)
             {
-                sendJsonResponse(request, response, new Object[]{"error: Your session with our website appears to have ended.  Please log out and back in.", false});
+                sendJsonResponse(request, response, new Envelope("error: Your session with our website appears to have ended.  Please log out and back in.", false));
             }
             else
             {
-                sendJsonResponse(request, response, new Object[]{"error: Communications issue between your computer and our website (" + msg + ')', false});
+                sendJsonResponse(request, response, new Envelope("error: Communications issue between your computer and our website (" + msg + ')', false));
             }
             return;
         }
 
-        if (!methodHandledResponse)
+        // Handle response (if the method did not)
+        if (!response.isCommitted())
         {
 	        // Send JSON result
 	        long start = System.nanoTime();
-	        sendJsonResponse(request, response, new Object[] {ret[0], ret[1]});
+	        sendJsonResponse(request, response, envelope);
 	        long end = System.nanoTime();
 
 	        if (end - start > 2000000000)
@@ -241,204 +248,21 @@ public class JsonCommandServlet extends HttpServlet
     }
 
     /**
-     * Read the JSON request (susceptible to Exceptions that are allowed to be thrown from here),
-     * and then call the appropriate Controller method.  The controller method exceptions are
-     * caught and returned carefully as JSON error String responses.  Note, this should not happen - if
-     * they do, it is a case of a missing try/catch handler in a Controller method.  Troll the logs to find
-     * these and fix them as they come up.
+     * Build and send the response Envelope to the client.
+     * @param request original servlet request
+     * @param response original servlet response
+     * @param envelope data and status to be written
      */
-    private Object[] makeJsonCall(HttpServletRequest request, HttpServletResponse response, String json) throws Exception
-    {
-        String pathInfo = request.getPathInfo();
-        Matcher matcher = cmdUrlPattern.matcher(pathInfo);
-
-        if (matcher.find() && matcher.groupCount() < 2)
-        {
-            String msg = "error: Invalid JSON request - /controller/method not specified: " + json;
-            LOG.warn(msg);
-            return new Object[] {msg, false, false};
-        }
-
-        String bean = matcher.group(1);
-        String methodName = matcher.group(2);
-        Object jArgs;
-        try
-        {
-        	jArgs = JsonReader.jsonToJava(json);
-        }
-        catch(Exception e)
-        {
-        	String errMsg = "error: unable to parse JSON argument list on call '" + bean + "." + methodName + "'";
-        	LOG.error(errMsg, e);
-        	return new Object[] {errMsg, false, false};
-        }
-
-        if (jArgs != null && !(jArgs instanceof Object[]))
-        {
-            return new Object[] {"error: Arguments must be either null or a JSON array", false};
-        }
-        Object[] args = (Object[]) jArgs;
-        int argCount = (args == null) ? 0 : args.length;
-
-        if (LOG.isDebugEnabled())
-        {
-            LOG.debug("  " + bean + '.' + methodName + '(' + json.substring(1, json.length() - 1) + ')');
-        }
-
-        Object target;
-        try
-        {
-            target = appCtx.getBean(bean);
-        }
-        catch(Exception e)
-        {
-            LOG.warn("Invalid JSON target: " + bean);
-            return new Object[] {"error: Invalid target '" + bean + "'.", false, false};
-        }
-
-        Class targetType = target.getClass();
-        Annotation annotation = ReflectionUtils.getClassAnnotation(targetType, ControllerClass.class);
-        if (annotation == null)
-        {
-            return new Object[] {"error: target '" + bean + "' is not marked as a ControllerClass.", false, false};
-        }
-
-        long start = System.nanoTime();
-
-        // Wrap the call to the Controller so we can detect any methods that fail to catch exceptions and properly
-        // return them as errors.  This separates the errors related to communication from errors related to the
-        // Controller throwing an exception.
-        Object result;
-        boolean selfHandlingResponse = false;
-        boolean status = true;
-
-        try
-        {
-            String methodKey = bean + '.' + methodName + '.' + argCount;
-            Method method = methodMap.get(methodKey);
-            if (method == null)
-            {
-                method = getMethod(targetType, methodName, argCount);
-                if (method == null)
-                {
-                    return new Object[] {"error: Method not found: " + methodKey, false, false};
-                }
-
-                Annotation a = ReflectionUtils.getMethodAnnotation(method, ControllerMethod.class);
-                if (a != null)
-                {
-                    ControllerMethod cm = (ControllerMethod)a;
-                    if ("false".equalsIgnoreCase(cm.allow()))
-                    {
-                        return new Object[] {"error: Method '" + methodName + "' is not allowed to be called via HTTP Request.", false, false};
-                    }
-                }
-
-                methodMap.put(methodKey, method);
-            }
-            Annotation a = ReflectionUtils.getMethodAnnotation(method, HttpResponseHandler.class);
-            selfHandlingResponse = a != null;
-            result = callMethod(method, target, args);
-        }
-        catch (ThreadDeath t)
-        {
-            throw t;
-        }
-        catch (Throwable t)
-        {
-            t = getDeepestException(t);
-            String msg = t.getClass().getName();
-            if (t.getMessage() != null)
-            {
-                msg += ' ' + t.getMessage();
-            }
-            LOG.warn("An exception occurred calling '" + bean + '.' + methodName + "'", t);
-            result = "error: '" + methodName + "' failed with the following error: " + msg;
-            status = false;
-        }
-
-        // Time the Controller call.
-        long end = System.nanoTime();
-
-        String api = bean + '.' + methodName + json;
-        if (api.length() > 256)
-        {
-            api = api.substring(0, 255);
-        }
-        LOG.info(api + ' ' + ((end - start) / 1000000) + " ms");
-
-        return new Object[]{result, status, selfHandlingResponse};
-    }
-
-    private static void sendJsonResponse(HttpServletRequest request, HttpServletResponse response, Object[] o)
+    private static void sendJsonResponse(HttpServletRequest request, HttpServletResponse response, Envelope envelope)
     {
         try
         {
-            Boolean success = (Boolean) request.getAttribute(ATTRIBUTE_STATUS);
-            if (!success)
-            {   // If the called method forcefully set status to false, then overwrite the data with the
-                // value from the ATTRIBUTE_FAIL_MESSAGE (which will contain the failure reason).
-                o[0] = request.getAttribute(ATTRIBUTE_FAIL_MESSAGE);
+            if (response.isCommitted())
+            {   // Cannot write, response has already been committed.
+                return;
             }
-            response.setContentType("application/json");
-            response.setHeader("Cache-Control", "private, no-cache, no-store");
-
-            // Temporarily wrap return type in Object[] to shrink the return type in JSON format
-            String retVal = JsonWriter.objectToJson(new Object[]{o[0]});
-            StringBuilder s = new StringBuilder("{\"data\":");
-
-            // Now pull off the Object[] wrapper.
-            if ("[]".equals(retVal))
-            {
-                s.append("null");
-            }
-            else
-            {
-                s.append(retVal.substring(1, retVal.length() - 1));
-            }
-
-            retVal = null;  // clear reference for GC friendliness
-            s.append(",\"status\":");
-            if (!success)
-            {   // Servlet handler (invoked method) can force the status to null
-                s.append(false);
-            }
-            else
-            {
-                s.append(o[1]);
-            }
-            s.append('}');
-
-            ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream();
-            jsonBytes.write(s.toString().getBytes("UTF-8"));
-            s.setLength(0);    // being GC friendly, since JSON response can be large
-            s = null;
-
-            // For debugging
-            if (LOG.isDebugEnabled())
-            {
-                LOG.debug("  return " + new String(jsonBytes.toByteArray(), "UTF-8"));
-            }
-
-            //  Header can be null coming from other WebClients (such as .NET client)
-            String header = request.getHeader("Accept-Encoding");
-            if (jsonBytes.size() > 512 && header != null && header.contains("gzip"))
-            {   // Only compress if the output is longer than 512 bytes.
-
-                ByteArrayOutputStream compressedBytes = new ByteArrayOutputStream(jsonBytes.size());
-                IOUtilities.compressBytes(jsonBytes, compressedBytes);
-
-                if (compressedBytes.size() < jsonBytes.size())
-                {   // Only write compressed if it is smaller than original JSON String
-                    response.setHeader("Content-Encoding", "gzip");
-                    jsonBytes = compressedBytes;
-                }
-            }
-
-            response.setContentLength(jsonBytes.size());
-            OutputStream output = new BufferedOutputStream(response.getOutputStream());
-            jsonBytes.writeTo(output);
-            output.flush();
+            String json = buildResponse(request, response, envelope);
+            writeResponse(request, response, json);
         }
         catch (ThreadDeath t)
         {
@@ -475,7 +299,96 @@ public class JsonCommandServlet extends HttpServlet
         }
     }
 
-    private static Throwable getDeepestException(Throwable e)
+    /**
+     * Write the response Envelope to the client
+     * @param request original servlet request
+     * @param response original servlet response
+     * @param json String response to write
+     * @throws IOException
+     */
+    private static void writeResponse(HttpServletRequest request, HttpServletResponse response, String json) throws IOException
+    {
+        ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream();
+        jsonBytes.write(json.getBytes("UTF-8"));
+
+        // For debugging
+        if (LOG.isDebugEnabled())
+        {
+            LOG.debug("  return " + new String(jsonBytes.toByteArray(), "UTF-8"));
+        }
+
+        //  Header can be null coming from other WebClients (such as .NET client)
+        String header = request.getHeader("Accept-Encoding");
+        if (jsonBytes.size() > 512 && header != null && header.contains("gzip"))
+        {   // Only compress if the output is longer than 512 bytes.
+
+            ByteArrayOutputStream compressedBytes = new ByteArrayOutputStream(jsonBytes.size());
+            IOUtilities.compressBytes(jsonBytes, compressedBytes);
+
+            if (compressedBytes.size() < jsonBytes.size())
+            {   // Only write compressed if it is smaller than original JSON String
+                response.setHeader("Content-Encoding", "gzip");
+                jsonBytes = compressedBytes;
+            }
+        }
+
+        response.setContentLength(jsonBytes.size());
+        OutputStream output = new BufferedOutputStream(response.getOutputStream());
+        jsonBytes.writeTo(output);
+        output.flush();
+    }
+
+    /**
+     * Build the response envelope as a String to be returned to the client.
+     * @param request original servlet request
+     * @param response original servlet response
+     * @param envelope data and status to be written
+     * @return String (JSON format) of envelope to be return to client.
+     */
+    private static String buildResponse(HttpServletRequest request, HttpServletResponse response, Envelope envelope)
+    {
+        Boolean success = (Boolean) request.getAttribute(ATTRIBUTE_STATUS);
+        if (!success)
+        {   // If the called method forcefully set status to false, then overwrite the data with the
+            // value from the ATTRIBUTE_FAIL_MESSAGE (which will contain the failure reason).
+            envelope.data = request.getAttribute(ATTRIBUTE_FAIL_MESSAGE);
+        }
+        response.setContentType("application/json");
+        response.setHeader("Cache-Control", "private, no-cache, no-store");
+
+        // Temporarily wrap return type in Object[] to shrink the return type in JSON format
+        String retJson = JsonWriter.objectToJson(new Object[]{envelope.data});
+        StringBuilder s = new StringBuilder("{\"data\":");
+
+        // Now pull off the Object[] wrapper.
+        if ("[]".equals(retJson))
+        {
+            s.append("null");
+        }
+        else
+        {
+            s.append(retJson.substring(1, retJson.length() - 1));
+        }
+
+        s.append(",\"status\":");
+        if (!success)
+        {   // Servlet handler (invoked method) can force the status to null
+            s.append(false);
+        }
+        else
+        {
+            s.append(envelope.status);
+        }
+        s.append('}');
+        return s.toString();
+    }
+
+    /**
+     * Get the deepest (original cause) of the exception chain.
+     * @param e Throwable exception that occurred.
+     * @return Throwable original (causal) exception
+     */
+    static Throwable getDeepestException(Throwable e)
     {
         while (e.getCause() != null)
         {
@@ -498,154 +411,5 @@ public class JsonCommandServlet extends HttpServlet
         }
 
         return e;
-    }
-
-    private static Method getMethod(Class c, String name, int argc)
-    {
-        Method[] methods = c.getMethods();
-        for (Method method : methods)
-        {
-            if (name.equals(method.getName()) && method.getParameterTypes().length == argc)
-            {
-                return method;
-            }
-        }
-        return null;
-    }
-
-    private static Object callMethod(Method method, Object target, Object[] args)
-    {
-        try
-        {
-            return method.invoke(target, convertArgs(method, args));
-        }
-        catch (IllegalAccessException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (InvocationTargetException e)
-        {
-            throw new RuntimeException(e.getTargetException());
-        }
-    }
-
-    private static Object[] convertArgs(Method method, Object[] args)
-    {
-        Object[] converted = new Object[args.length];
-        Class[] types = method.getParameterTypes();
-
-        for (int i=0; i < args.length; i++)
-        {
-            if (args[i] == null)
-            {
-                converted[i] = null;
-            }
-            else if (args[i] instanceof Class)
-            {   // Special handle an argument of type 'Class' because isLogicalPrimitive() is true for Class.
-                converted[i] = args[i];
-            }
-            else if (JsonReader.isLogicalPrimitive(args[i].getClass()))
-            {   // Marshal all primitive types, including Date, String (any combination of directions -
-                // String to number, number to String, Date to String, etc.)  See Converter.convert().
-                converted[i] = Converter.convert(args[i], types[i]);
-            }
-            else if (args[i] instanceof Collection)
-            {
-                if (Collection.class.isAssignableFrom(types[i]))
-                {   // easy: Collection to Collection Type
-                    converted[i] = args[i];
-                }
-                else if (types[i].isArray())
-                {   // hard: Collection to array type (handles any array type, String[], Object[], Custom[], etc.)
-                    Collection inbound = (Collection)args[i];
-                    converted[i] = arrayBuilder(types[i].getComponentType(), inbound);
-                }
-                else
-                {
-                    throw new IllegalArgumentException("Cannot pass Collection into an argument type that is not a Collection or Array[], arg type: " + types[i].getName());
-                }
-            }
-            else if (args[i].getClass().isArray())
-            {
-                if (types[i].isArray())
-                {   // easy: array to array
-                    converted[i] = args[i];
-                }
-                else if (Collection.class.isAssignableFrom(types[i]))
-                {   // harder: array to collection
-                    try
-                    {
-                        Collection col = (Collection) JsonReader.newInstance(types[i]);
-                        Collections.addAll(col, args);
-                    }
-                    catch (IOException e)
-                    {
-                        throw new IllegalArgumentException("Could not create Collection instance for type: " + types[i].getName());
-                    }
-                }
-                else
-                {
-                    throw new IllegalArgumentException("Cannot pass Array[] into an argument type that is not a Collection or Array[], arg type: " + types[i].getName());
-                }
-            }
-            else if (args[i] instanceof JsonObject)
-            {
-                JsonObject jsonObj = (JsonObject) args[i];
-                Object type = jsonObj.get("@type");
-                if (!(type instanceof String) || !StringUtilities.hasContent((String) type))
-                {
-                    jsonObj.put("@type", types[i].getName());
-                }
-                CmdReader reader = new CmdReader();
-                try
-                {
-                    converted[i] = reader.convertParsedMapsToJava(jsonObj);
-                }
-                catch (IOException e)
-                {
-                    throw new IllegalArgumentException("Unable to convert JSON object to arg type: " + types[i].getName(), e);
-                }
-            }
-            else if (args[i] instanceof Map)
-            {
-                Map map = (Map) args[i];
-                if (Map.class.isAssignableFrom(types[i]))
-                {
-                    converted[i] = map;
-                }
-                else
-                {   // Map on input, being set into a non-map type.  Make sure @type gets set correctly.
-                    throw new IllegalArgumentException("Unable to convert Map to arg type: " + types[i].getName());
-                }
-            }
-            else
-            {
-                converted[i] = args[i];
-            }
-        }
-        return converted;
-    }
-
-    public static <T> T[] arrayBuilder(Class<T> classToCastTo, Collection c)
-    {
-        T[] array = (T[]) c.toArray((T[]) Array.newInstance(classToCastTo, c.size()));
-        Iterator i = c.iterator();
-        int idx = 0;
-        while (i.hasNext())
-        {
-            Array.set(array, idx++, i.next());
-        }
-        return array;
-    }
-
-    /**
-     * Extend JsonReader to gain access to the convertParsedMapsToJava() API.
-     */
-    static class CmdReader extends JsonReader
-    {
-        public Object convertParsedMapsToJava(JsonObject root) throws IOException
-        {
-            return super.convertParsedMapsToJava(root);
-        }
     }
 }

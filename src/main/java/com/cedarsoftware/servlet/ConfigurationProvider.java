@@ -1,0 +1,403 @@
+package com.cedarsoftware.servlet;
+
+import com.cedarsoftware.util.Converter;
+import com.cedarsoftware.util.ReflectionUtils;
+import com.cedarsoftware.util.StringUtilities;
+import com.cedarsoftware.util.io.JsonObject;
+import com.cedarsoftware.util.io.JsonReader;
+import com.cedarsoftware.util.io.MetaUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.http.HttpServletRequest;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Implement controller provider.  Controllers are named, targetable objects that
+ * clients can invoke methods upon.
+ * *
+ * @author John DeRegnaucourt (jdereg@gmail.com)
+ *         <br/>
+ *         Copyright (c) Cedar Software LLC
+ *         <br/><br/>
+ *         Licensed under the Apache License, Version 2.0 (the "License");
+ *         you may not use this file except in compliance with the License.
+ *         You may obtain a copy of the License at
+ *         <br/><br/>
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *         <br/><br/>
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS,
+ *         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *         See the License for the specific language governing permissions and
+ *         limitations under the License.
+ */
+public abstract class ConfigurationProvider
+{
+    private static final Logger LOG = LogManager.getLogger(ConfigurationProvider.class);
+    private static final Map<String, Method> methodMap = new ConcurrentHashMap<>();
+    private ServletConfig servletConfig;
+    protected static Pattern cmdUrlPattern = Pattern.compile("^/([^/]+)/([^/]+)(.*)$");	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
+
+    public ConfigurationProvider(ServletConfig servletConfig)
+    {
+        this.servletConfig = servletConfig;
+    }
+
+    ServletConfig getServletConfig()
+    {
+        return servletConfig;
+    }
+
+    protected abstract Object getController(String name);
+
+    /**
+     * Read the JSON request (susceptible to Exceptions that are allowed to be thrown from here),
+     * and then call the appropriate Controller method.  The controller method exceptions are
+     * caught and returned carefully as JSON error String responses.  Note, this should not happen - if
+     * they do, it is a case of a missing try/catch handler in a Controller method.  Troll the logs to find
+     * these and fix them as they come up.
+     */
+    public Envelope callController(HttpServletRequest request, String json) throws Exception
+    {
+        String pathInfo = request.getPathInfo();
+        Matcher matcher = cmdUrlPattern.matcher(pathInfo);
+
+        if (matcher.find() && matcher.groupCount() < 2)
+        {
+            String msg = "error: Invalid JSON request - /controller/method not specified: " + json;
+            LOG.warn(msg);
+            return new Envelope(msg, false);
+        }
+
+        // Step 1: Fetch controller instance by name
+        String controllerName = matcher.group(1);
+        Object controller = getController(controllerName);
+        if (controller instanceof Envelope)
+        {
+            return (Envelope) controller;
+        }
+
+        // Step 2: Convert JSON arguments from URL (GET argument or POST body) to Object[]
+        String methodName = matcher.group(2);
+        Object jArgs = getArguments(json, controllerName, methodName);
+        if (jArgs instanceof Envelope)
+        {
+            return (Envelope) jArgs;
+        }
+        Object[] args = (Object[]) jArgs;
+
+        // Step 3: Find and invoke method
+        // Wrap the call to the Controller so we can detect any methods that fail to catch exceptions and properly
+        // return them as errors.  This separates the errors related to communication from errors related to the
+        // Controller throwing an exception.
+        Object result;
+        boolean status = true;
+        long start = System.nanoTime();
+
+        try
+        {
+            Object method = getMethod(controller, controllerName, methodName, args.length);
+            if (method instanceof Envelope)
+            {
+                return (Envelope) method;
+            }
+            start = System.nanoTime();  // remove method location from execution time
+            result = callMethod((Method) method, controller, args);
+        }
+        catch (ThreadDeath t)
+        {
+            throw t;
+        }
+        catch (Throwable t)
+        {
+            t = JsonCommandServlet.getDeepestException(t);
+            String msg = t.getClass().getName();
+            if (t.getMessage() != null)
+            {
+                msg += ' ' + t.getMessage();
+            }
+            LOG.warn("An exception occurred calling '" + controllerName + '.' + methodName + "'", t);
+            result = "error: '" + methodName + "' failed with the following message: " + msg;
+            status = false;
+        }
+
+        // Time the Controller call.
+        long end = System.nanoTime();
+
+        String api = controllerName + '.' + methodName + json;
+        if (api.length() > 256)
+        {
+            api = api.substring(0, 255);
+        }
+        LOG.info(api + ' ' + ((end - start) / 1000000) + " ms");
+
+        return new Envelope(result, status);
+    }
+
+
+    /**
+     * Build the argument list from the passed in json
+     * @param json String argument lists
+     * @param controllerName String name of controller
+     * @param methodName String name of method to call on the controller
+     * @return Object[] of arguments to be passed to method, or Envelope if an error occurred.
+     */
+    protected static Object getArguments(String json, String controllerName, String methodName)
+    {
+        Object jArgs;
+        try
+        {
+            jArgs = JsonReader.jsonToJava(json);
+        }
+        catch(Exception e)
+        {
+            String errMsg = "error: unable to parse JSON argument list on call '" + controllerName + "." + methodName + "'";
+            LOG.error(errMsg, e);
+            return new Envelope(errMsg, false);
+        }
+
+        if (jArgs != null && !(jArgs instanceof Object[]))
+        {
+            return new Envelope("error: Arguments must be either null or a JSON array", false);
+        }
+
+        if (LOG.isDebugEnabled())
+        {
+            LOG.debug("  " + controllerName + '.' + methodName + '(' + json.substring(1, json.length() - 1) + ')');
+        }
+
+        return jArgs;
+    }
+
+    /**
+     * Fetch the named method from the controller. First a local cache will be checked, and if not
+     * found, the method will be found reflectively on the controller.  If the method is found, then
+     * it will be checked for a ControllerMethod annotation, which can indicate that it is NOT allowed
+     * to be called.  This permits a public controller method to be blocked from remote access.
+     * @param controller Object on which the named method will be found.
+     * @param controllerName String name of the controller (Spring name, n-cube name, etc.)
+     * @param methodName String name of method to be located on the controller.
+     * @param argCount int number of arguments.  This is used as part of the cache key to allow for
+     * duplicate method names as long as the argument list length is different.
+     */
+    private static Object getMethod(Object controller, String controllerName, String methodName, int argCount)
+    {
+        String methodKey = controllerName + '.' + methodName + '.' + argCount;
+        Method method = methodMap.get(methodKey);
+        if (method == null)
+        {
+            method = getMethod(controller.getClass(), methodName, argCount);
+            if (method == null)
+            {
+                return new Envelope("error: Method not found: " + methodKey, false);
+            }
+
+            Annotation a = ReflectionUtils.getMethodAnnotation(method, ControllerMethod.class);
+            if (a != null)
+            {
+                ControllerMethod cm = (ControllerMethod)a;
+                if ("false".equalsIgnoreCase(cm.allow()))
+                {
+                    return new Envelope("error: Method '" + methodName + "' is not allowed to be called via HTTP Request.", false);
+                }
+            }
+
+            methodMap.put(methodKey, method);
+        }
+        return method;
+    }
+
+    /**
+     * Reflectively find the requested method on the requested class.
+     * @param c Class containing the method
+     * @param name String method name
+     * @param argc int number of arguments
+     * @return Method instance located on the passed in class.
+     */
+    private static Method getMethod(Class c, String name, int argc)
+    {
+        Method[] methods = c.getMethods();
+        for (Method method : methods)
+        {
+            if (name.equals(method.getName()) && method.getParameterTypes().length == argc)
+            {
+                return method;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Invoke the passed in method, on the passed in target, with the passed in arguments.
+     * @param method Method to be invoked
+     * @param target instance which contains the method
+     * @param args Object[] of values which line up to the method arguments.
+     * @return Object the value return from the invoked method.
+     */
+    private static Object callMethod(Method method, Object target, Object[] args)
+    {
+        try
+        {
+            return method.invoke(target, convertArgs(method, args));
+        }
+        catch (IllegalAccessException e)
+        {
+            throw new RuntimeException(e);
+        }
+        catch (InvocationTargetException e)
+        {
+            throw new RuntimeException(e.getTargetException());
+        }
+    }
+
+    /**
+     * Convert the passed in arguments to match the arguments of the passed in method.
+     * @param method Method which contains argument types.
+     * @param args Object[] of values, which need to be converted.
+     * @return Object[] of converted values.  The original values from args[], will be
+     * converted to match the argument types in the method.  Java-util's Converter.convert()
+     * handles the primitive and simple types (date, etc.). Collections and Arrays will
+     * be converted to match the respective argument type, and Maps will be converted to
+     * classes (if the matching argument is not a Map).  This is done by bring the Class
+     * type of the argument into the json-io JsonObject which represents the instance of
+     * the class.
+     */
+    private static Object[] convertArgs(Method method, Object[] args)
+    {
+        Object[] converted = new Object[args.length];
+        Class[] types = method.getParameterTypes();
+
+        for (int i=0; i < args.length; i++)
+        {
+            if (args[i] == null)
+            {
+                converted[i] = null;
+            }
+            else if (args[i] instanceof Class)
+            {   // Special handle an argument of type 'Class' because isLogicalPrimitive() is true for Class.
+                converted[i] = args[i];
+            }
+            else if (MetaUtils.isLogicalPrimitive(args[i].getClass()))
+            {   // Marshal all primitive types, including Date, String (any combination of directions -
+                // String to number, number to String, Date to String, etc.)  See Converter.convert().
+                converted[i] = Converter.convert(args[i], types[i]);
+            }
+            else if (args[i] instanceof Collection)
+            {
+                if (Collection.class.isAssignableFrom(types[i]))
+                {   // easy: Collection to Collection Type
+                    converted[i] = args[i];
+                }
+                else if (types[i].isArray())
+                {   // hard: Collection to array type (handles any array type, String[], Object[], Custom[], etc.)
+                    Collection inbound = (Collection)args[i];
+                    converted[i] = arrayBuilder(types[i].getComponentType(), inbound);
+                }
+                else
+                {
+                    throw new IllegalArgumentException("Cannot pass Collection into an argument type that is not a Collection or Array[], arg type: " + types[i].getName());
+                }
+            }
+            else if (args[i].getClass().isArray())
+            {
+                if (types[i].isArray())
+                {   // easy: array to array
+                    converted[i] = args[i];
+                }
+                else if (Collection.class.isAssignableFrom(types[i]))
+                {   // harder: array to collection
+                    try
+                    {
+                        Collection col = (Collection) JsonReader.newInstance(types[i]);
+                        Collections.addAll(col, args);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new IllegalArgumentException("Could not create Collection instance for type: " + types[i].getName());
+                    }
+                }
+                else
+                {
+                    throw new IllegalArgumentException("Cannot pass Array[] into an argument type that is not a Collection or Array[], arg type: " + types[i].getName());
+                }
+            }
+            else if (args[i] instanceof JsonObject)
+            {
+                JsonObject jsonObj = (JsonObject) args[i];
+                Object type = jsonObj.get("@type");
+                if (!(type instanceof String) || !StringUtilities.hasContent((String) type))
+                {
+                    jsonObj.put("@type", types[i].getName());
+                }
+                CmdReader reader = new CmdReader();
+                try
+                {
+                    converted[i] = reader.convertParsedMapsToJava(jsonObj);
+                }
+                catch (Exception e)
+                {
+                    throw new IllegalArgumentException("Unable to convert JSON object to arg type: " + types[i].getName(), e);
+                }
+            }
+            else if (args[i] instanceof Map)
+            {
+                Map map = (Map) args[i];
+                if (Map.class.isAssignableFrom(types[i]))
+                {
+                    converted[i] = map;
+                }
+                else
+                {   // Map on input, being set into a non-map type.  Make sure @type gets set correctly.
+                    throw new IllegalArgumentException("Unable to convert Map to arg type: " + types[i].getName());
+                }
+            }
+            else
+            {
+                converted[i] = args[i];
+            }
+        }
+        return converted;
+    }
+
+    /**
+     * Convert Collection to a Java (typed) array [].
+     * @param classToCastTo array type (Object[], Person[], etc.)
+     * @param c Collection containing items to be placed into the array.
+     * @param <T> Type of the array
+     * @return Array of the type (T) containing the items from collection 'c'.
+     */
+    public static <T> T[] arrayBuilder(Class<T> classToCastTo, Collection c)
+    {
+        T[] array = (T[]) c.toArray((T[]) Array.newInstance(classToCastTo, c.size()));
+        Iterator i = c.iterator();
+        int idx = 0;
+        while (i.hasNext())
+        {
+            Array.set(array, idx++, i.next());
+        }
+        return array;
+    }
+
+    /**
+     * Extend JsonReader to gain access to the convertParsedMapsToJava() API.
+     */
+    static class CmdReader extends JsonReader
+    {
+        public Object convertParsedMapsToJava(JsonObject root)
+        {
+            return super.convertParsedMapsToJava(root);
+        }
+    }
+}

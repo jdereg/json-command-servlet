@@ -34,7 +34,8 @@
 
     <properties>
         <version.java-util>1.18.0</version.java-util>
-        <version.json.io>2.9.4</version.json.io>
+        <version.json.io>3.0.0-SNAPSHOT</version.json.io>
+        <version.ncube>3.1.4</version.ncube>
         <version.servlet>3.0.1</version.servlet>
         <version.log4j>2.1</version.log4j>
         <version.junit>4.12</version.junit>
@@ -188,6 +189,12 @@
             <groupId>com.cedarsoftware</groupId>
             <artifactId>json-io</artifactId>
             <version>${version.json.io}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.cedarsoftware</groupId>
+            <artifactId>n-cube</artifactId>
+            <version>${version.ncube}</version>
         </dependency>
 
         <dependency>
