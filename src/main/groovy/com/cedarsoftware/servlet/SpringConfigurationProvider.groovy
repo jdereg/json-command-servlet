@@ -46,6 +46,25 @@ class SpringConfigurationProvider extends ConfigurationProvider
     }
 
     /**
+     * All controller methods are allowed by default.  They can be turned off by making them
+     * either not public -or- using the annotation @ControllerMethod(allow = false)}
+     * @param methodName String method name to check.
+     * @return true if the method can be called, false otherwise.
+     */
+    protected boolean isMethodAllowed(String methodName)
+    {
+        return true
+    }
+
+    /**
+     * @return String 'spring' to indicate that a Spring controller was used.
+     */
+    protected String getLogPrefix()
+    {
+        return 'spring'
+    }
+
+    /**
      * @param name String name of a Controller instance (Spring bean name, n-cube name, etc).
      * @return Controller instance if successful, otherwise an error Envelope instance is
      * returned with the appropriate error message already filled in, and the status set to false.

@@ -58,7 +58,26 @@ abstract class ConfigurationProvider
         return servletConfig
     }
 
+    /**
+     * Fetch the controller with the given name.
+     * @name String name of controller to fetch
+     * @return Object controller instance registered with the given name.  The
+     * controller could be registered as a Spring Bean or an n-cube.
+     */
     protected abstract Object getController(String name)
+
+    /**
+     * Verify that the passed in method is allowed to be called remotely.
+     * @param methodName String method name to check
+     * @return boolean true if ok, false otherwise.
+     */
+    protected abstract boolean isMethodAllowed(String methodName)
+
+    /**
+     * @return String prefix to append to log so that we can tell what controller
+     * type was used (spring:, ncube:, etc.)
+     */
+    protected abstract String getLogPrefix()
 
     /**
      * Get a regex Matcher that matches the URL String for /context/controller/method
@@ -66,15 +85,13 @@ abstract class ConfigurationProvider
      * @param json String arguments in JSON form from HTTP request
      * @return Matcher that pattern matches the URL or
      */
-    static Object getUrlMatcher(HttpServletRequest request, String json)
+    static Matcher getUrlMatcher(HttpServletRequest request)
     {
         Matcher matcher = cmdUrlPattern.matcher(request.pathInfo)
 
         if (matcher.find() && matcher.groupCount() < 2)
         {
-            String msg = "error: Invalid JSON request - /controller/method not specified: " + json
-            LOG.warn(msg)
-            return new Envelope(msg, false)
+            return null
         }
         return matcher
     }
@@ -88,13 +105,13 @@ abstract class ConfigurationProvider
      */
     public Envelope callController(HttpServletRequest request, String json)
     {
-        Object var = getUrlMatcher(request, json)
-        if (var instanceof Envelope)
+        final Matcher matcher = getUrlMatcher(request)
+        if (matcher == null)
         {
-            return (Envelope) var
+            String msg = "error: Invalid JSON request - /controller/method not specified: " + json
+            LOG.warn(msg)
+            return new Envelope(msg, false)
         }
-
-        final Matcher matcher = (Matcher) var
 
         // Step 1: Fetch controller instance by name
         final String controllerName = matcher.group(1)
@@ -112,6 +129,13 @@ abstract class ConfigurationProvider
             return (Envelope) jArgs
         }
         final Object[] args = (Object[]) jArgs
+
+        if (!isMethodAllowed(methodName))
+        {
+            String msg = "Method '" + methodName + "' is not allowed to be called remotely on controller '" + controllerName + "'"
+            LOG.warn(msg)
+            return new Envelope(msg, false)
+        }
 
         // Step 3: Find and invoke method
         // Wrap the call to the Controller so we can detect any methods that fail to catch exceptions and properly
@@ -150,7 +174,7 @@ abstract class ConfigurationProvider
 
         // Time the Controller call.
         long end = System.nanoTime()
-        String api = controllerName + '.' + methodName + json
+        String api = getLogPrefix() + ':' + controllerName + '.' + methodName + json
 
         if (api.length() > 256)
         {
@@ -160,7 +184,6 @@ abstract class ConfigurationProvider
 
         return new Envelope(result, status)
     }
-
 
     /**
      * Build the argument list from the passed in json

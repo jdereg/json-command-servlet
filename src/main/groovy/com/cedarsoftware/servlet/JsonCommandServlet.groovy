@@ -183,15 +183,17 @@ public class JsonCommandServlet extends HttpServlet
      */
     private Object getProvider(HttpServletRequest request, String json)
     {
-        Object var = ConfigurationProvider.getUrlMatcher(request, json)
-        if (var instanceof Envelope)
-        {   // Bad controller name or missing method, etc. within the URL String
-            return var
+        Matcher matcher = ConfigurationProvider.getUrlMatcher(request)
+        if (matcher == null)
+        {
+            String msg = "error: Invalid JSON request - /controller/method not specified: " + json
+            LOG.warn(msg)
+            return new Envelope(msg, false)
         }
 
-        final String controllerName = ((Matcher) var).group(1)
+        final String controllerName = matcher.group(1)
 
-        var = nCubeCfgProvider.getController(controllerName)
+        Object var = nCubeCfgProvider.getController(controllerName)
         if (var instanceof Envelope)
         {
             var = springCfgProvider.getController(controllerName)

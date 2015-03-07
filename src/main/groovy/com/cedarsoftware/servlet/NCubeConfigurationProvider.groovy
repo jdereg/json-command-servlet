@@ -31,6 +31,33 @@ class NCubeConfigurationProvider extends ConfigurationProvider
 {
     private static final Logger LOG = LogManager.getLogger(NCubeConfigurationProvider.class)
     private final ApplicationID appId
+    private static final Set allowedMethods = [
+            'containsCell',
+            'containsCellById',
+            'getApplicationID',
+            'getAxes',
+            'getAxis',
+            'getAxisFromColumnId',
+            'getCell',
+            'getCellById',
+            'getCellByIdNoExecute',
+            'getCellMap',
+            'getDefaultCellValue',
+            'getDeltaDescription',
+            'getMap',
+            'getMetaProperties',
+            'getMetaProperty',
+            'getName',
+            'getNumCells',
+            'getNumDimensions',
+            'getOptionalScope',
+            'getReferencedCubeNames',
+            'getRequiredScope',
+            'getRuleInfo',
+            'sha1',
+            'toFormattedJson',
+            'toHtml',
+            'validateCubeName'] as HashSet
 
     NCubeConfigurationProvider(ServletConfig servletConfig)
     {
@@ -63,5 +90,23 @@ class NCubeConfigurationProvider extends ConfigurationProvider
             LOG.warn("Invalid controller target (not found) : " + cubeName)
             return new Envelope("error: Invalid target '" + cubeName + "'.", false)
         }
+    }
+
+    /**
+     * Only read-only methods can be called.  They are checked against a list to ensure.
+     * @param methodName String method name to check.
+     * @return true if the method can be called, false otherwise.
+     */
+    protected boolean isMethodAllowed(String methodName)
+    {
+        return allowedMethods.contains(methodName)
+    }
+
+    /**
+     * @return String 'ncube' to indicate that an N-Cube controller was used.
+     */
+    protected String getLogPrefix()
+    {
+        return 'ncube'
     }
 }
