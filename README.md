@@ -51,17 +51,17 @@ HttpServletResponse objects within your Controller method, you can access JsonCo
 JsonCommandServlet.servletResponse.get().  The command servlet places the request and response objects on a ThreadLocal
 and makes it available for the lifespace of your method call.
 
-If you need to stream data back, you can use the JsonCommandServlet.servletResponse.get() to obtain the HttpServletResponse
-object, and then use the response object set HTTP Response headers and to get the output stream to write to.  You may be
-wondering, how do I prevent the JsonCommandServlet from writing a JSON standard response object instead
-of the streamed data?
-
-For controller methods that need to stream data back, place the @HttpResponseHandler handler annotation on your method
-and the JsonCommandServlet will not communicate back the HTTP response, but instead your method is expected to.  Use
-the HttpServletResponse object obtained from the JsonCommandServlet.servletResponse.get() call to set HTTP Response
-headers and to obtain the output stream to write to.
+If you need to stream data back, you can use the JsonCommandServlet.servletResponse.get() to obtain the
+HttpServletResponse object, and then use the response object set HTTP Response headers and to get the output stream to
+write to.  You may be wondering, how do I prevent the JsonCommandServlet from writing a JSON standard response object
+instead of the streamed data?  The JsonCommandServlet will detect that the output stream has been written to, and
+will not write the standard return (JSON) envelope.
 
 Version History
+* 1.2.2
+ * Added support for using n-cubes as controllers.  This allows dynamic programming (reload-able service side code) without restarting web container.
+ * The JsonCommandServlet now automatically recognizes if a controller writes to the HTTP response output stream.  If so, it does not write the standard JSON envelope.
+ * Filled out all Javadoc.
 * 1.2.1
  * Added significant improvement in argument marshalling.  Maps are converted to the appropriate class if they match a non-Map argument.  All primitive arguments are set using java-util's Converter.convert() API.
  * Updated to use java-util 1.18.0.

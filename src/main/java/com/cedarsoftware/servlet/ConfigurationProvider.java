@@ -43,14 +43,14 @@ import java.util.regex.Pattern;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public abstract class ConfigurationProvider
+abstract class ConfigurationProvider
 {
     private static final Logger LOG = LogManager.getLogger(ConfigurationProvider.class);
     private static final Map<String, Method> methodMap = new ConcurrentHashMap<>();
-    private ServletConfig servletConfig;
-    protected static Pattern cmdUrlPattern = Pattern.compile("^/([^/]+)/([^/]+)(.*)$");	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
+    private final ServletConfig servletConfig;
+    private static final Pattern cmdUrlPattern = Pattern.compile("^/([^/]+)/([^/]+)(.*)$");	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
 
-    public ConfigurationProvider(ServletConfig servletConfig)
+    ConfigurationProvider(ServletConfig servletConfig)
     {
         this.servletConfig = servletConfig;
     }
@@ -63,16 +63,14 @@ public abstract class ConfigurationProvider
     protected abstract Object getController(String name);
 
     /**
-     * Read the JSON request (susceptible to Exceptions that are allowed to be thrown from here),
-     * and then call the appropriate Controller method.  The controller method exceptions are
-     * caught and returned carefully as JSON error String responses.  Note, this should not happen - if
-     * they do, it is a case of a missing try/catch handler in a Controller method.  Troll the logs to find
-     * these and fix them as they come up.
+     * Get a regex Matcher that matches the URL String for /context/controller/method
+     * @param request HttpServletRequest passed to the command servlet.
+     * @param json String arguments in JSON form from HTTP request
+     * @return Matcher that pattern matches the URL or
      */
-    public Envelope callController(HttpServletRequest request, String json) throws Exception
+    static Object getUrlMatcher(HttpServletRequest request, String json)
     {
-        String pathInfo = request.getPathInfo();
-        Matcher matcher = cmdUrlPattern.matcher(pathInfo);
+        Matcher matcher = cmdUrlPattern.matcher(request.getPathInfo());
 
         if (matcher.find() && matcher.groupCount() < 2)
         {
@@ -80,23 +78,42 @@ public abstract class ConfigurationProvider
             LOG.warn(msg);
             return new Envelope(msg, false);
         }
+        return matcher;
+    }
+
+    /**
+     * Read the JSON request (susceptible to Exceptions that are allowed to be thrown from here),
+     * and then call the appropriate Controller method.  The controller method exceptions are
+     * caught and returned carefully as JSON error String responses.  Note, this should not happen - if
+     * they do, it is a case of a missing try/catch handler in a Controller method.  Troll the logs to find
+     * these and fix them as they come up.
+     */
+    public Envelope callController(HttpServletRequest request, String json)
+    {
+        Object var = getUrlMatcher(request, json);
+        if (var instanceof Envelope)
+        {
+            return (Envelope) var;
+        }
+
+        final Matcher matcher = (Matcher) var;
 
         // Step 1: Fetch controller instance by name
-        String controllerName = matcher.group(1);
-        Object controller = getController(controllerName);
+        final String controllerName = matcher.group(1);
+        final Object controller = getController(controllerName);
         if (controller instanceof Envelope)
         {
             return (Envelope) controller;
         }
 
         // Step 2: Convert JSON arguments from URL (GET argument or POST body) to Object[]
-        String methodName = matcher.group(2);
+        final String methodName = matcher.group(2);
         Object jArgs = getArguments(json, controllerName, methodName);
         if (jArgs instanceof Envelope)
         {
             return (Envelope) jArgs;
         }
-        Object[] args = (Object[]) jArgs;
+        final Object[] args = (Object[]) jArgs;
 
         // Step 3: Find and invoke method
         // Wrap the call to the Controller so we can detect any methods that fail to catch exceptions and properly
@@ -108,7 +125,7 @@ public abstract class ConfigurationProvider
 
         try
         {
-            Object method = getMethod(controller, controllerName, methodName, args.length);
+            final Object method = getMethod(controller, controllerName, methodName, args.length);
             if (method instanceof Envelope)
             {
                 return (Envelope) method;
@@ -135,8 +152,8 @@ public abstract class ConfigurationProvider
 
         // Time the Controller call.
         long end = System.nanoTime();
-
         String api = controllerName + '.' + methodName + json;
+
         if (api.length() > 256)
         {
             api = api.substring(0, 255);
@@ -154,7 +171,7 @@ public abstract class ConfigurationProvider
      * @param methodName String name of method to call on the controller
      * @return Object[] of arguments to be passed to method, or Envelope if an error occurred.
      */
-    protected static Object getArguments(String json, String controllerName, String methodName)
+    static Object getArguments(String json, String controllerName, String methodName)
     {
         Object jArgs;
         try

@@ -26,7 +26,7 @@ import java.util.HashMap;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class NCubeConfigurationProvider extends ConfigurationProvider
+class NCubeConfigurationProvider extends ConfigurationProvider
 {
     private static final Logger LOG = LogManager.getLogger(NCubeConfigurationProvider.class);
     private final ApplicationID appId;
@@ -35,7 +35,10 @@ public class NCubeConfigurationProvider extends ConfigurationProvider
     {
         super(servletConfig);
         String tenant = getServletConfig().getInitParameter("tenant");
-        appId = NCubeManager.getApplicationID(tenant, "NCE", new HashMap());
+        ApplicationID.validateTenant(tenant);
+        String app = getServletConfig().getInitParameter("app");
+        ApplicationID.validateApp(app);
+        appId = NCubeManager.getApplicationID(tenant, app, new HashMap());
     }
 
     /**

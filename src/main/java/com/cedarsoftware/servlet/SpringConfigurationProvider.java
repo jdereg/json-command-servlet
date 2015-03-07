@@ -32,10 +32,10 @@ import java.lang.annotation.Annotation;
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
-public class SpringConfigurationProvider extends ConfigurationProvider
+class SpringConfigurationProvider extends ConfigurationProvider
 {
     private static final Logger LOG = LogManager.getLogger(SpringConfigurationProvider.class);
-    final ApplicationContext springAppCtx;
+    private final ApplicationContext springAppCtx;
 
     SpringConfigurationProvider(ServletConfig servletConfig)
     {

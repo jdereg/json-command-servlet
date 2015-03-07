@@ -20,7 +20,7 @@ package com.cedarsoftware.servlet;
 public class Envelope
 {
     Object data;
-    boolean status;
+    final boolean status;
 
     public Envelope(Object data, boolean status)
     {

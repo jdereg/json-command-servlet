@@ -13,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.AccessControlException;
+import java.util.regex.Matcher;
 
 /**
  * This class will accept JSON REST requests, find the named Spring Bean,
@@ -69,27 +70,16 @@ public class JsonCommandServlet extends HttpServlet
     public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>();
     public static final String ATTRIBUTE_STATUS = "status";
     public static final String ATTRIBUTE_FAIL_MESSAGE = "failMsg";
-    public static final String FRAMEWORK = "framework";
-    private ConfigurationProvider cfgProvider;
+    private SpringConfigurationProvider springCfgProvider;
+    private NCubeConfigurationProvider nCubeCfgProvider;
     private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class);
 
     public void init()
     {
         try
         {
-            String framework = getServletConfig().getInitParameter(FRAMEWORK);
-            if ("ncube".equalsIgnoreCase(framework) || "n-cube".equalsIgnoreCase(framework))
-            {
-                cfgProvider = new NCubeConfigurationProvider(getServletConfig());
-            }
-            else if ("spring".equalsIgnoreCase(framework))
-            {
-                cfgProvider = new SpringConfigurationProvider(getServletConfig());
-            }
-            else
-            {
-                throw new IllegalArgumentException("web.xml missing 'framework' init-param for JsonCommandServlet.  Set this to 'ncube' or 'spring' depending on where your controllers are configured.");
-            }
+            nCubeCfgProvider = new NCubeConfigurationProvider(getServletConfig());
+            springCfgProvider = new SpringConfigurationProvider(getServletConfig());
         }
         catch (Exception e)
         {
@@ -184,13 +174,60 @@ public class JsonCommandServlet extends HttpServlet
         servletResponse.remove();
     }
 
+    /**
+     * @param request HttpServletRequest passed to the command servlet.
+     * @return Either a JsonCommandServlet ConfigurationProvider or an Envelope instance,
+     * if unable to obtain the configuration provider.  The URL must contain /controller/method,
+     * and then if the controller name can be found in the n-cube provider, then the ncubeCfgProvider
+     * is returned, otherwise the springCfgProvider is checked.  If the controller name can be
+     * found there, then the springCfgProvider is returned.  If the controller cannot be located
+     * by name from either provider, and Envelope is returned, indicating this error.
+     */
+    private Object getProvider(HttpServletRequest request, String json)
+    {
+        Object var = ConfigurationProvider.getUrlMatcher(request, json);
+        if (var instanceof Envelope)
+        {   // Bad controller name or missing method, etc. within the URL String
+            return var;
+        }
+
+        final String controllerName = ((Matcher) var).group(1);
+
+        var = nCubeCfgProvider.getController(controllerName);
+        if (var instanceof Envelope)
+        {
+            var = springCfgProvider.getController(controllerName);
+            return var instanceof Envelope ? var : springCfgProvider;
+        }
+        else
+        {
+            return nCubeCfgProvider;
+        }
+    }
+
+    /**
+     * This is the main driver of the command servlet.  This code obtains the appropriate provider,
+     * calls the appropriate method on the provider, and then optionally writes the return response,
+     * if the called method did not write to the HTTP response.
+     * @param request HttpServletRequest passed to the command servlet.
+     * @param response HttpServletResponse passed to the command servlet.
+     * @param json String arguments that were passed in JSON format.
+     */
     private void handleRequestAndResponse(HttpServletRequest request, HttpServletResponse response, String json)
     {
-        Envelope envelope;
+        Object envelope;
         try
         {
-            // Handling request = making the call
-            envelope = cfgProvider.callController(request, json);
+            Object provider = getProvider(request, json);
+            if (provider instanceof Envelope)
+            {
+                envelope = provider;
+            }
+            else
+            {
+                ConfigurationProvider cfgProvider = (ConfigurationProvider) provider;
+                envelope = cfgProvider.callController(request, json);
+            }
         }
         catch (ThreadDeath d)
         {
@@ -233,7 +270,7 @@ public class JsonCommandServlet extends HttpServlet
         {
 	        // Send JSON result
 	        long start = System.nanoTime();
-	        sendJsonResponse(request, response, envelope);
+	        sendJsonResponse(request, response, (Envelope) envelope);
 	        long end = System.nanoTime();
 
 	        if (end - start > 2000000000)
