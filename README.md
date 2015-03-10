@@ -7,7 +7,7 @@ To include in your project:
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-command-servlet</artifactId>
-  <version>1.2.2</version>
+  <version>1.2.3</version>
 </dependency>
 ```
 
@@ -154,6 +154,8 @@ See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/jso
 from Javascript.
 
 Version History
+* 1.2.3
+ * Allow for N-Cube or Spring (or both) to be used to hold map of bean-names to controllers.
 * 1.2.2
  * Added support for using n-cubes as controllers.  This allows dynamic programming (reload-able service side code) without restarting web container.
  * The JsonCommandServlet now automatically recognizes if a controller writes to the HTTP response output stream.  If so, it does not write the standard JSON envelope.
