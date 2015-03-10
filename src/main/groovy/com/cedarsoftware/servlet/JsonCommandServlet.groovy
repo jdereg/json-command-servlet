@@ -77,11 +77,19 @@ public class JsonCommandServlet extends HttpServlet
         try
         {
             nCubeCfgProvider = new NCubeConfigurationProvider(getServletConfig())
+        }
+        catch (Exception e)
+        {
+            LOG.warn("Unable to set up NCubeConfigurationProvider", e)
+        }
+
+        try
+        {
             springCfgProvider = new SpringConfigurationProvider(getServletConfig())
         }
         catch (Exception e)
         {
-            LOG.error("Error initializing app context", e)
+            LOG.warn("Unable to set up SpringConfigurationProvider", e)
         }
     }
 
@@ -193,10 +201,14 @@ public class JsonCommandServlet extends HttpServlet
 
         final String controllerName = matcher.group(1)
 
-        Object var = nCubeCfgProvider.getController(controllerName)
-        if (var instanceof Envelope)
+        Object var = nCubeCfgProvider?.getController(controllerName)
+        if (var instanceof Envelope || var == null)
         {
-            var = springCfgProvider.getController(controllerName)
+            var = springCfgProvider?.getController(controllerName)
+            if (var == null)
+            {
+                throw new IllegalStateException('You have no ConfigurationProviders set for the JsonCommandServlet.  It cannot route and HTTP Requests to controllers.')
+            }
             return var instanceof Envelope ? var : springCfgProvider
         }
         else
@@ -237,7 +249,7 @@ public class JsonCommandServlet extends HttpServlet
         {
             // Handle response in case of unhandled exception by controller
             Throwable t = getDeepestException(e)
-            String msg = t.getClass().getName()
+            String msg = t.getClass().name
             if (t.message != null)
             {
                 msg += ' ' + t.message
@@ -245,7 +257,7 @@ public class JsonCommandServlet extends HttpServlet
 
             if (t instanceof IOException)
             {
-                if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().getName()))
+                if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().name))
                 {
                     LOG.info("Client aborted connection while processing JSON request.")
                 }
@@ -308,15 +320,15 @@ public class JsonCommandServlet extends HttpServlet
         catch (Throwable t)
         {
             t = getDeepestException(t)
-            String msg = t.getClass().getName()
-            if (t.getMessage() != null)
+            String msg = t.getClass().name
+            if (t.message != null)
             {
-                msg += ' ' + t.getMessage()
+                msg += ' ' + t.message
             }
 
             if (t instanceof IOException)
             {
-                if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().getName()))
+                if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().name))
                 {
                     LOG.info("Client aborted connection while processing JSON request.")
                 }
@@ -438,7 +450,7 @@ public class JsonCommandServlet extends HttpServlet
         }
         else
         {
-            String msg = e.getClass().getName()
+            String msg = e.getClass().name
             if (e.message != null)
             {
                 msg = msg + ' ' + e.message
