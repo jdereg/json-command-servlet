@@ -33,7 +33,7 @@
     </developers>
 
     <properties>
-        <version.java-util>1.18.0</version.java-util>
+        <version.java-util>1.18.1</version.java-util>
         <version.json.io>3.0.0</version.json.io>
         <version.ncube>3.1.5</version.ncube>
         <version.servlet>3.0.1</version.servlet>
