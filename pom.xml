@@ -33,9 +33,10 @@
     </developers>
 
     <properties>
-        <version.java-util>1.18.1</version.java-util>
-        <version.json.io>3.0.0</version.json.io>
+        <version.java-util>1.19.1</version.java-util>
+        <version.json.io>3.0.2</version.json.io>
         <version.ncube>3.1.5</version.ncube>
+        <version.groovy>2.4.3</version.groovy>
         <version.servlet>3.0.1</version.servlet>
         <version.log4j>2.1</version.log4j>
         <version.junit>4.12</version.junit>
@@ -168,6 +169,12 @@
     </build>
 
     <dependencies>
+
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>${version.groovy}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
