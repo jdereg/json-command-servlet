@@ -397,7 +397,7 @@ public class JsonCommandServlet extends HttpServlet
     private static String buildResponse(HttpServletRequest request, HttpServletResponse response, Envelope envelope)
     {
         Boolean success = (Boolean) request.getAttribute(ATTRIBUTE_STATUS)
-        if (!success)
+        if (!success && envelope.data == null)
         {   // If the called method forcefully set status to false, then overwrite the data with the
             // value from the ATTRIBUTE_FAIL_MESSAGE (which will contain the failure reason).
             envelope.data = request.getAttribute(ATTRIBUTE_FAIL_MESSAGE)
