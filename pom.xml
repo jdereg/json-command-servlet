@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-command-servlet</artifactId>
     <packaging>jar</packaging>
-    <version>1.2.4-SNAPSHOT</version>
+    <version>1.2.5-SNAPSHOT</version>
     <description>JSON Command Servlet</description>
     <url>https://github.com/jdereg/json-command-servlet</url>
 
@@ -33,7 +33,7 @@
     </developers>
 
     <properties>
-        <version.java-util>1.19.1</version.java-util>
+        <version.java-util>1.19.2</version.java-util>
         <version.json.io>3.0.2</version.json.io>
         <version.ncube>3.1.5</version.ncube>
         <version.groovy>2.4.3</version.groovy>
@@ -42,8 +42,6 @@
         <version.junit>4.12</version.junit>
         <version.spring>4.1.4.RELEASE</version.spring>
         <version.plugin.compiler>3.2</version.plugin.compiler>
-        <version.plugin.groovy.eclipse.compiler>2.9.1-01</version.plugin.groovy.eclipse.compiler>
-        <version.plugin.groovy.eclipse.batch>2.3.7-01</version.plugin.groovy.eclipse.batch>
         <version.plugin.deploy>2.8.2</version.plugin.deploy>
         <version.plugin.source>2.4</version.plugin.source>
         <version.plugin.javadoc>2.10.1</version.plugin.javadoc>
