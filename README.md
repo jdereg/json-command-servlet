@@ -154,6 +154,10 @@ See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/jso
 from Javascript.
 
 Version History
+* 1.2.5
+ * Updated dependent library versions
+* 1.2.4
+ * Updated dependent library versions
 * 1.2.3
  * Allow for N-Cube or Spring (or both) to be used to hold map of bean-names to controllers.
 * 1.2.2
