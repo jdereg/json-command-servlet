@@ -7,11 +7,11 @@ To include in your project:
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-command-servlet</artifactId>
-  <version>1.2.3</version>
+  <version>1.2.5</version>
 </dependency>
 ```
 
-[Donations welcome](https://coinbase.com/jdereg)
+Like **json-command-servlet** and find it useful? Donate some **Bitcoin**: 12UYuk4Pwe1orBaAWsj2FThG51BaAhSBGT
 
 XHR / Ajax calls can be sent as HTTP GET or POST requests.  To make a request, it should be formatted like this:
 
