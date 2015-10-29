@@ -11,7 +11,7 @@ To include in your project:
 </dependency>
 ```
 
-Like **json-command-servlet** and find it useful? Donate some **Bitcoin**: 1MJFgxTVFZZ3EkmdPabsQ5UremUg2HHPe7
+Like **json-command-servlet** and find it useful? Donate some **Bitcoin**: 1MeozsfDpUALpnu3DntHWXxoPJXvSAXmQA
 
 XHR / Ajax calls can be sent as HTTP GET or POST requests.  To make a request, it should be formatted like this:
 
