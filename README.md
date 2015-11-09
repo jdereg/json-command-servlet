@@ -7,7 +7,7 @@ To include in your project:
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-command-servlet</artifactId>
-  <version>1.2.5</version>
+  <version>1.3.0</version>
 </dependency>
 ```
 
@@ -58,10 +58,41 @@ write to.  You may be wondering, how do I prevent the JsonCommandServlet from wr
 instead of the streamed data?  The JsonCommandServlet will detect that the output stream has been written to, and
 will not write the standard return (JSON) envelope.
 
+Setup
+=====
+Configure JsonCommandServlet using either web.xml or UrlRewrite.xml (tuckey.org).  Example urlrewrite.xml configuration:
+    <?xml version="1.0" encoding="utf-8"?>
+    <!DOCTYPE urlrewrite PUBLIC "-//tuckey.org//DTD UrlRewrite 4.0//EN"
+            "http://www.tuckey.org/res/dtds/urlrewrite4.0.dtd">
+    
+    <urlrewrite>
+        <rule match-type="regex">
+            <note>
+                Redirect inbound requests using n-cube's sys.classpath
+            </note>
+            <from>^/sys/[^/]+/.*$</from>
+            <set name="sys.classpath.prefix">sys</set>
+            <run class="com.cedarsoftware.util.ProxyRouter" method="route" />
+            <to>null</to>
+        </rule>
+    
+        <!-- Route all HTTP GET/PUT JSON commands to the JsonCommandServlet -->
+        <rule match-type="regex">
+            <note>
+                Redirect inbound requests using n-cube's sys.classpath
+            </note>
+            <from>^/cmd/[^/]+/.*$</from>
+            <run class="com.cedarsoftware.servlet.JsonCommandServlet" method="route"/>
+            <to>null</to>
+        </rule>
+    
+    </urlrewrite>
+
+
 N-Cube
 ======
 N-Cubes can be used as Controllers. To do so, make sure you set the 'tenant' value and 'app' value as init-params within
-the web.xml configuration:
+the web.xml configuration (or UrlRewrite.xml configuration):
 
     <servlet>
         <description>JSON Servlet</description>
@@ -135,8 +166,9 @@ additional scoping axes (as many as you want).  In order to call this one, the J
 `call("apollo.getCell", [{method:'calcPrice',state:'OH'}]);` This will find the n-cube apollo, locate the 'method' axis
 and select the `calcPrice` column, then locate the `state` axis and `OH` column (or `Default` if `OH` was not there),
 then execute the cell at this location.  If the cell contains a simple value, it will be returned. If the cell is a
-GroovyExpression, it will be executed.  The cell can have a URL to your groovy code allowing you to edit your code in your
-favorite IDE (as well as single step debug it too), or the code could be 'inline' within the cell.
+GroovyExpression, it will be executed.  The cell can have a URL to your groovy code (placed on a Content Delivery Network 
+- CDN) allowing you to edit your code in your favorite IDE (as well as single step debug it too), or the code could be 
+'inline' within the cell.
 
 The image below is an example of what the n-cube controller looks like:
 ![Alt text](https://raw.githubusercontent.com/jdereg/json-command-servlet/master/ncubeScreenShot.png "n-cube Controller")
@@ -154,6 +186,9 @@ See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/jso
 from Javascript.
 
 Version History
+* 1.3.0
+ * JsonCommandServlet can now be routed to via UrlRewrite (tuckey.org).  This elminates the need to configure web.xml for setting up JsonCommandServlet.  See docs above for the UrlRewrite.xml configuration example.
+ * Updated dependent library versions
 * 1.2.5
  * Updated dependent library versions
 * 1.2.4
