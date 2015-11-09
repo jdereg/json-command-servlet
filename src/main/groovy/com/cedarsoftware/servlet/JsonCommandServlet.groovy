@@ -80,7 +80,7 @@ public class JsonCommandServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            LOG.warn("Unable to set up NCubeConfigurationProvider", e)
+            LOG.warn("Unable to set up NCubeConfigurationProvider: " + e.getMessage())
         }
 
         try
@@ -89,7 +89,44 @@ public class JsonCommandServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            LOG.warn("Unable to set up SpringConfigurationProvider", e)
+            LOG.warn("Unable to set up SpringConfigurationProvider: " + e.getMessage(), e)
+        }
+        LOG.info('JsonCommandServlet init complete')
+    }
+
+    /**
+     * If using UrlRewrite from tuckey.org, then route HTTP Json commands via
+     * this 'route' method and list it in the urlrewrite.xml.
+     */
+    public void route(HttpServletRequest request, HttpServletResponse response)
+    {
+        if ("post".equalsIgnoreCase(request.getMethod()))
+        {
+            doPost(request, response)
+        }
+        else if ("get".equalsIgnoreCase(request.getMethod()))
+        {
+            doGet(request, response)
+        }
+        else if ("head".equalsIgnoreCase(request.getMethod()))
+        {
+            doHead(request, response)
+        }
+        else if ("put".equalsIgnoreCase(request.getMethod()))
+        {
+            doPut(request, response)
+        }
+        else if ("delete".equalsIgnoreCase(request.getMethod()))
+        {
+            doDelete(request, response)
+        }
+        else if ("options".equalsIgnoreCase(request.getMethod()))
+        {
+            doOptions(request, response)
+        }
+        else if ("trace".equalsIgnoreCase(request.getMethod()))
+        {
+            doTrace(request, response)
         }
     }
 
@@ -207,7 +244,7 @@ public class JsonCommandServlet extends HttpServlet
             var = springCfgProvider?.getController(controllerName)
             if (var == null)
             {
-                throw new IllegalStateException('You have no ConfigurationProviders set for the JsonCommandServlet.  It cannot route and HTTP Requests to controllers.')
+                throw new IllegalStateException('You have no ConfigurationProviders set for the JsonCommandServlet.  It cannot route any HTTP Requests to controllers.')
             }
             return var instanceof Envelope ? var : springCfgProvider
         }

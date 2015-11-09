@@ -62,9 +62,9 @@ class NCubeConfigurationProvider extends ConfigurationProvider
     NCubeConfigurationProvider(ServletConfig servletConfig)
     {
         super(servletConfig)
-        String tenant = getServletConfig().getInitParameter("tenant")
+        String tenant = getServletConfig().getInitParameter("tenant") ?: 'CEDAR'
         ApplicationID.validateTenant(tenant)
-        String app = getServletConfig().getInitParameter("app")
+        String app = getServletConfig().getInitParameter("app") ?: 'NCE'
         ApplicationID.validateApp(app)
         appId = NCubeManager.getApplicationID(tenant, app, new HashMap())
     }
@@ -87,7 +87,7 @@ class NCubeConfigurationProvider extends ConfigurationProvider
         }
         catch(Exception e)
         {
-            LOG.warn("Invalid controller target (not found) : " + cubeName)
+            LOG.warn("Invalid controller target (not found) : " + cubeName + ", " + e.getMessage())
             return new Envelope("error: Invalid target '" + cubeName + "'.", false)
         }
     }

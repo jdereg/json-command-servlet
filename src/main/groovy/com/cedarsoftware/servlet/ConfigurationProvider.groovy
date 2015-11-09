@@ -47,6 +47,7 @@ abstract class ConfigurationProvider
     private static final Map<String, Method> methodMap = new ConcurrentHashMap<>()
     private final ServletConfig servletConfig
     private static final Pattern cmdUrlPattern = ~'^/([^/]+)/([^/]+)(.*)$'	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
+    private static final Pattern cmdUrlPattern2 = ~'^/[^/]+/([^/]+)/([^/]+)(.*)$'	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
 
     ConfigurationProvider(ServletConfig servletConfig)
     {
@@ -87,7 +88,16 @@ abstract class ConfigurationProvider
      */
     static Matcher getUrlMatcher(HttpServletRequest request)
     {
-        Matcher matcher = cmdUrlPattern.matcher(request.pathInfo)
+        Matcher matcher
+        if (StringUtilities.hasContent(request.pathInfo))
+        {
+            matcher = cmdUrlPattern.matcher(request.pathInfo)
+        }
+        else
+        {
+            String path = request.getRequestURI() - request.getContextPath()
+            matcher = cmdUrlPattern2.matcher(path)
+        }
 
         if (matcher.find() && matcher.groupCount() < 2)
         {
