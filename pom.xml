@@ -38,7 +38,7 @@
         <version.ncube>3.3.13</version.ncube>
         <version.groovy>2.4.3</version.groovy>
         <version.servlet>3.0.1</version.servlet>
-        <version.log4j>2.1</version.log4j>
+        <version.log4j>2.4.1</version.log4j>
         <version.junit>4.12</version.junit>
         <version.spring>4.2.2.RELEASE</version.spring>
         <version.plugin.compiler>3.2</version.plugin.compiler>

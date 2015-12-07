@@ -185,6 +185,16 @@ restarting web server), and the code is kept outside the ".war" file (in the cas
 See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/json-io) for an easy way to make Ajax calls
 from Javascript.
 
+### Sponsors
+[![Alt text](https://www.yourkit.com/images/yklogo.png "YourKit")](https://www.yourkit.com/.net/profiler/index.jsp)
+
+YourKit supports open source projects with its full-featured Java Profiler.
+YourKit, LLC is the creator of <a href="https://www.yourkit.com/java/profiler/index.jsp">YourKit Java Profiler</a>
+and <a href="https://www.yourkit.com/.net/profiler/index.jsp">YourKit .NET Profiler</a>,
+innovative and intelligent tools for profiling Java and .NET applications.
+
+[![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")](https://www.jetbrains.com/idea/)
+
 Version History
 * 1.3.0
  * JsonCommandServlet can now be routed to via UrlRewrite (tuckey.org).  This elminates the need to configure web.xml for setting up JsonCommandServlet.  See docs above for the UrlRewrite.xml configuration example.
