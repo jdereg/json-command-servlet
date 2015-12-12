@@ -7,7 +7,7 @@ To include in your project:
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-command-servlet</artifactId>
-  <version>1.3.0</version>
+  <version>1.3.1</version>
 </dependency>
 ```
 
@@ -196,6 +196,8 @@ innovative and intelligent tools for profiling Java and .NET applications.
 [![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")](https://www.jetbrains.com/idea/)
 
 Version History
+* 1.3.1
+ * Updated to json-io 4.3.0
 * 1.3.0
  * JsonCommandServlet can now be routed to via UrlRewrite (tuckey.org).  This elminates the need to configure web.xml for setting up JsonCommandServlet.  See docs above for the UrlRewrite.xml configuration example.
  * Updated dependent library versions
