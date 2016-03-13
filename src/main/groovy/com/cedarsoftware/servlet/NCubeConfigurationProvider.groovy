@@ -47,7 +47,7 @@ class NCubeConfigurationProvider extends ConfigurationProvider
             'getMap',
             'getMetaProperties',
             'getMetaProperty',
-            'getName',
+            'getColumnName',
             'getNumCells',
             'getNumDimensions',
             'getOptionalScope',
