@@ -370,6 +370,7 @@ abstract class ConfigurationProvider
                     {
                         Collection col = (Collection) JsonReader.newInstance(types[i])
                         Collections.addAll(col, args)
+                        converted[i] = col
                     }
                     catch (Exception e)
                     {
