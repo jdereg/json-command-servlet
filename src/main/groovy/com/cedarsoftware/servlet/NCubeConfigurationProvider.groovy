@@ -32,6 +32,7 @@ class NCubeConfigurationProvider extends ConfigurationProvider
     private static final Logger LOG = LogManager.getLogger(NCubeConfigurationProvider.class)
     private final ApplicationID appId
     private static final Set allowedMethods = [
+            'at',
             'containsCell',
             'containsCellById',
             'getApplicationID',
@@ -50,10 +51,12 @@ class NCubeConfigurationProvider extends ConfigurationProvider
             'getColumnName',
             'getNumCells',
             'getNumDimensions',
+            'getNumPotentialCells',
             'getOptionalScope',
             'getReferencedCubeNames',
             'getRequiredScope',
             'getRuleInfo',
+            'hasRuleAxis',
             'sha1',
             'toFormattedJson',
             'toHtml',

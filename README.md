@@ -196,6 +196,13 @@ innovative and intelligent tools for profiling Java and .NET applications.
 [![Alt text](https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcS-ZOCfy4ezfTmbGat9NYuyfe-aMwbo3Czx3-kUfKreRKche2f8fg "IntellijIDEA")](https://www.jetbrains.com/idea/)
 
 Version History
+* 1.3.2
+ * Updated pom.xml to skip GPG signing unless performing Maven Release.
+ * Updated to Spring 4.3.1.RELEASE
+ * Updated to json-io 4.5.0
+ * Updated to java-util 1.24.0
+ * Updated to Groovy 2.4.7
+ * Rebuilt with Groovy sources included
 * 1.3.1
  * Updated to json-io 4.3.0
 * 1.3.0

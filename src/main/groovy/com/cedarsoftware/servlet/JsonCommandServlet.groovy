@@ -80,7 +80,7 @@ public class JsonCommandServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            LOG.warn("Unable to set up NCubeConfigurationProvider: " + e.getMessage())
+            LOG.warn("Unable to set up NCubeConfigurationProvider: " + e.message)
         }
 
         try
@@ -89,7 +89,7 @@ public class JsonCommandServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            LOG.warn("Unable to set up SpringConfigurationProvider: " + e.getMessage(), e)
+            LOG.warn("Unable to set up SpringConfigurationProvider: " + e.message, e)
         }
         LOG.info('JsonCommandServlet init complete')
     }
@@ -394,7 +394,7 @@ public class JsonCommandServlet extends HttpServlet
      */
     private static void writeResponse(HttpServletRequest request, HttpServletResponse response, String json) throws IOException
     {
-        ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream()
+        OutputStream jsonBytes = new ByteArrayOutputStream()
         jsonBytes.write(json.getBytes("UTF-8"))
 
         // For debugging
@@ -408,7 +408,7 @@ public class JsonCommandServlet extends HttpServlet
         if (jsonBytes.size() > 512 && header != null && header.contains("gzip"))
         {   // Only compress if the output is longer than 512 bytes.
 
-            ByteArrayOutputStream compressedBytes = new ByteArrayOutputStream(jsonBytes.size())
+            OutputStream compressedBytes = new ByteArrayOutputStream(jsonBytes.size())
             IOUtilities.compressBytes(jsonBytes, compressedBytes)
 
             if (compressedBytes.size() < jsonBytes.size())
@@ -456,7 +456,7 @@ public class JsonCommandServlet extends HttpServlet
             s.append(retJson.substring(1, retJson.length() - 1))
         }
 
-        s.append(",\"status\":")
+        s.append(',"status":')
         if (!success)
         {   // Servlet handler (invoked method) can force the status to null
             s.append(false)
