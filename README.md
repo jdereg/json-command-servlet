@@ -10,9 +10,6 @@ To include in your project:
   <version>1.3.2</version>
 </dependency>
 ```
-
-Like **json-command-servlet** and find it useful? Donate some **Bitcoin**: 1MeozsfDpUALpnu3DntHWXxoPJXvSAXmQA
-
 XHR / Ajax calls can be sent as HTTP GET or POST requests.  To make a request, it should be formatted like this:
 
 HTTP://mycompany.com/Context/controller/method
