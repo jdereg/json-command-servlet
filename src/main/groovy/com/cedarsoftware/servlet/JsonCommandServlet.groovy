@@ -436,7 +436,9 @@ public class JsonCommandServlet extends HttpServlet
         Boolean success = (Boolean) request.getAttribute(ATTRIBUTE_STATUS)
         if (!success && envelope.data == null)
         {   // If the called method forcefully set status to false, then overwrite the data with the
-            // value from the ATTRIBUTE_FAIL_MESSAGE (which will contain the failure reason).
+            // value from the ATTRIBUTE_FAIL_MESSAGE (which will contain the failure reason), unless
+            // they value being sent is not (null or false).  This allows data to be returned in the
+            // failure case.
             envelope.data = request.getAttribute(ATTRIBUTE_FAIL_MESSAGE)
         }
         response.contentType = "application/json"

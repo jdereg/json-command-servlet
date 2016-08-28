@@ -1,5 +1,8 @@
 json-command-servlet
 ====================
+[![Build Status](https://travis-ci.org/jdereg/json-command-servlet.svg?branch=master)](https://travis-ci.org/jdereg/json-command-servlet)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-command-servlet/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-command-servlet)
+
 Java servlet that processes Ajax / XHR requests and returns JSON responses.
 
 To include in your project:
