@@ -3,7 +3,7 @@ json-command-servlet
 [![Build Status](https://travis-ci.org/jdereg/json-command-servlet.svg?branch=master)](https://travis-ci.org/jdereg/json-command-servlet)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-command-servlet/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.cedarsoftware/json-command-servlet)
 
-Java servlet that processes Ajax / XHR requests and returns JSON responses.
+Java servlet that processes REST requests and returns JSON responses.
 
 To include in your project:
 ```
@@ -24,7 +24,7 @@ innovative and intelligent tools for profiling Java and .NET applications.
 <a href="https://www.jetbrains.com/idea/"><img alt="Intellij IDEA from JetBrains" src="https://s-media-cache-ak0.pinimg.com/236x/bd/f4/90/bdf49052dd79aa1e1fc2270a02ba783c.jpg" data-canonical-src="https://s-media-cache-ak0.pinimg.com/236x/bd/f4/90/bdf49052dd79aa1e1fc2270a02ba783c.jpg" width="100" height="100" /></a>
 **Intellij IDEA**
 ___
-XHR / Ajax calls can be sent as HTTP GET or POST requests.  To make a request, it should be formatted like this:
+REST calls can be sent as HTTP GET or POST requests.  To make a request, it should be formatted like this:
 
 HTTP://mycompany.com/Context/controller/method
 [HTTP HEADERS]
@@ -44,7 +44,7 @@ The method will be called, and then the return value from the method will be wri
 where 'status' is true if the method called returned without exception, otherwise 'status' is false.  The 'result'
 is the JSON string-ified version of the method's return value.  If the method throws an exception, the exception
 message is the "result" and the status is false.  See json-io for a Java-script 'call()' method that makes
-the Ajax request for you with a very simple notation.  Use call("FooController.barMethod", []);
+the REST request for you with a very simple notation.  Use call("FooController.barMethod", []);
 
 In order for a 'Controller' class (That is the standard name of classes that are callable externally) to be called,
 it must have the Java annotation @ControllerClass.  This can be added directly to the class, or to an interface
@@ -193,10 +193,13 @@ As you get more familiar with this, you will see that n-cube Controllers are mor
 with the added benefits of scoping your method calls (and rules), dynamic reloading (the code can be refreshed without
 restarting web server), and the code is kept outside the ".war" file (in the case of Java web apps).
 
-See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/json-io) for an easy way to make Ajax calls
+See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/json-io) for an easy way to make REST calls
 from Javascript.
 
 Version History
+* 1.3.2
+ * Documentation updates
+ * travis-ci support
 * 1.3.1
  * Updated to json-io 4.3.0
 * 1.3.0
@@ -223,7 +226,7 @@ Version History
  * Updated to use latest versions of json-io and java-util.
  * Had issue with sonatype on 1.1.1
 * 1.1.0
- * Added ability for the ajax-called method to set the return status directly along with a text message.  This is done by using the request's attributes.
+ * Added ability for the REST called method to set the return status directly along with a text message.  This is done by using the request's attributes.
 * 1.0.0
  * Official release of JsonCommandServlet
 
