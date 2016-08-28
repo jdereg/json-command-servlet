@@ -200,6 +200,7 @@ Version History
 * 1.3.2
  * Documentation updates
  * travis-ci support
+ * updated to json-io 4.6.0
 * 1.3.1
  * Updated to json-io 4.3.0
 * 1.3.0
