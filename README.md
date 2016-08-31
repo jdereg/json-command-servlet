@@ -10,7 +10,7 @@ To include in your project:
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-command-servlet</artifactId>
-  <version>1.3.2</version>
+  <version>1.3.3</version>
 </dependency>
 ```
 ### Sponsors
@@ -197,6 +197,10 @@ See the jsonUtils.js file that ships with [json-io](http://github.com/jdereg/jso
 from Javascript.
 
 Version History
+* 1.3.3
+ * GMavenPlus used to compile
+ * javadoc.io hosted docs (javadoc hosted there, link available on github readme)
+ * updated to json-io 4.7.0
 * 1.3.2
  * Documentation updates
  * travis-ci support
@@ -211,7 +215,7 @@ Version History
 * 1.2.4
  * Updated dependent library versions
 * 1.2.3
- * Allow for N-Cube or Spring (or both) to be used to hold map of bean-names to controllers.
+ * Allow for N-Cube or Spring (or both) to be ApplicationContext sources.
 * 1.2.2
  * Added support for using n-cubes as controllers.  This allows dynamic programming (reload-able service side code) without restarting web container.
  * The JsonCommandServlet now automatically recognizes if a controller writes to the HTTP response output stream.  If so, it does not write the standard JSON envelope.

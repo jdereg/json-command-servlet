@@ -78,14 +78,16 @@
 
     <properties>
         <version.java-util>1.24.0</version.java-util>
-        <version.json.io>4.6.0</version.json.io>
-        <version.ncube>3.4.86</version.ncube>
+        <version.json.io>4.7.0</version.json.io>
+        <version.ncube>3.4.88</version.ncube>
         <version.groovy>2.4.7</version.groovy>
         <version.servlet>3.1.0</version.servlet>
         <version.log4j>2.5</version.log4j>
         <version.junit>4.12</version.junit>
         <version.spring>4.3.1.RELEASE</version.spring>
+        <version.plugin.assembly>2.6</version.plugin.assembly>
         <version.plugin.compiler>3.5.1</version.plugin.compiler>
+        <version.plugin.gmavenplus>1.5</version.plugin.gmavenplus>
         <version.plugin.deploy>2.8.2</version.plugin.deploy>
         <version.plugin.source>3.0.0</version.plugin.source>
         <version.plugin.javadoc>2.10.3</version.plugin.javadoc>
@@ -126,28 +128,43 @@
 
     <build>
         <plugins>
+            <!-- turn off normal compile/testCompile because we are using gmaven plus groovy compile -->
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>${version.plugin.compiler}</version>
-                <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
-                    <compilerId>groovy-eclipse-compiler</compilerId>
-                    <!-- <verbose>true</verbose> -->
-                </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.codehaus.groovy</groupId>
-                        <artifactId>groovy-eclipse-compiler</artifactId>
-                        <version>${version.plugin.groovy.eclipse.compiler}</version>
-                    </dependency>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
 
-                    <dependency>
-                        <groupId>org.codehaus.groovy</groupId>
-                        <artifactId>groovy-eclipse-batch</artifactId>
-                        <version>${version.plugin.groovy.eclipse.batch}</version>
-                    </dependency>
-                </dependencies>
+            <plugin>
+                <groupId>org.codehaus.gmavenplus</groupId>
+                <artifactId>gmavenplus-plugin</artifactId>
+                <version>${version.plugin.gmavenplus}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>addSources</goal>
+                            <goal>addTestSources</goal>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>groovydoc</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>groovydoc</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
@@ -158,45 +175,26 @@
                     <execution>
                         <id>attach-sources</id>
                         <goals>
-                            <goal>jar</goal>
+                            <goal>jar-no-fork</goal>
                         </goals>
                     </execution>
                 </executions>
             </plugin>
 
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>add-groovy-source</id>
-                        <!-- before package phase -->
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>${basedir}/src/main/groovy</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${version.plugin.javadoc}</version>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>${version.plugin.assembly}</version>
                 <configuration>
-                    <additionalparam>${javadoc.opts}</additionalparam>
+                    <descriptors>
+                        <descriptor>src/main/assembly/groovydoc.xml</descriptor>
+                    </descriptors>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>attach-javadocs</id>
+                        <id>javadoc</id>
+                        <phase>package</phase>
                         <goals>
-                            <goal>jar</goal>
+                            <goal>single</goal>
                         </goals>
                     </execution>
                 </executions>
