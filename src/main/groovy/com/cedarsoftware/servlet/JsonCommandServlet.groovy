@@ -13,7 +13,7 @@ import java.security.AccessControlException
 import java.util.regex.Matcher
 
 /**
- * This class will accept JSON REST requests, find the named Spring Bean,
+ * <p>This class will accept JSON REST requests, find the named Spring Bean,
  * find the method, and then invoke the method.  Once complete, it will
  * convert the return object to JSON and then send that back to the client.
  * The requests are typically made from a Javascript client, although they
@@ -22,13 +22,13 @@ import java.util.regex.Matcher
  * "json" part can be whatever name you map to this servlet in web.xml.
  * The arguments are sent as the HTTP POST body, or they can be sent via
  * query params like this:
- *
+ * </p><p>
  *     http://yoursite.com/json/Controller/methodName?json=[arg1, arg2,...]
- *
+ * </p><p>
  * When calling the JsonServlet, it will always return an object in the form:
- *
+ * </p><p>
  *     {"data":v,"status":false|true|null}
- *
+ * </p><p>
  * where the value 'v' is the return value of the Controller method called.
  * The status is 'true' if the method call properly succeeded.  Use the
  * return value 'v' when status === true.  If status === false then the
@@ -39,12 +39,12 @@ import java.util.regex.Matcher
  * status === false will indicate the error.  If the status === null then the
  * call() method within the browser never reached the server.  The value 'v' is
  * a message indicating a network communications issue.
- *
+ * </p><p>
  * The returned JSON is gzip compressed if the caller indicates that it
  * accepts Content-Encoding of gzip AND the return message is greater than
  * 512 bytes. The return stream from methods that return large arrays and/or
  * object graphs compresses especially well.
- *
+ * </p>
  * @author John DeRegnaucourt (jdereg@gmail.com)
  *         <br/>
  *         Copyright (c) Cedar Software LLC
