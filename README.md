@@ -194,7 +194,7 @@ As you get more familiar with this, you will see that n-cube Controllers are mor
 with the added benefits of scoping your method calls (and rules), dynamic reloading (the code can be refreshed without
 restarting web server), and the code is kept outside the ".war" file (in the case of Java web apps).
 
-See the [jsonUtil.js](https://github.com/jdereg/json-io/jsonUtil.js) file that ships with **json-io** for an easy way to make REST calls
+See the [jsonUtil.js](https://github.com/jdereg/json-io/blob/master/jsonUtil.js) file that ships with **json-io** for an easy way to make REST calls
 from Javascript.
 
 See [changelog.md](/changelog.md) for revision history.
