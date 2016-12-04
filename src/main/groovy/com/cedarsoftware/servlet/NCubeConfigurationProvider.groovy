@@ -90,8 +90,8 @@ class NCubeConfigurationProvider extends ConfigurationProvider
         }
         catch(Exception e)
         {
-            LOG.warn("Invalid controller target (not found) : " + cubeName + ", " + e.getMessage())
-            return new Envelope("error: Invalid target '" + cubeName + "'.", false)
+            LOG.warn("Invalid controller target (not found): ${cubeName}, ${e.message}")
+            return new Envelope("error: Invalid target '${cubeName}'.", false)
         }
     }
 

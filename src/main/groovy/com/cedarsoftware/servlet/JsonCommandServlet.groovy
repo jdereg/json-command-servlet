@@ -1,6 +1,7 @@
 package com.cedarsoftware.servlet
 
 import com.cedarsoftware.util.IOUtilities
+import com.cedarsoftware.util.StringUtilities
 import com.cedarsoftware.util.io.JsonWriter
 import groovy.transform.CompileStatic
 import org.apache.logging.log4j.LogManager
@@ -72,24 +73,24 @@ public class JsonCommandServlet extends HttpServlet
     private NCubeConfigurationProvider nCubeCfgProvider
     private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class)
 
-    public void init()
+    void init()
     {
         try
         {
-            nCubeCfgProvider = new NCubeConfigurationProvider(getServletConfig())
+            nCubeCfgProvider = new NCubeConfigurationProvider(servletConfig)
         }
         catch (Exception e)
         {
-            LOG.warn("Unable to set up NCubeConfigurationProvider: " + e.message)
+            LOG.warn("Unable to set up NCubeConfigurationProvider: ${e.message}")
         }
 
         try
         {
-            springCfgProvider = new SpringConfigurationProvider(getServletConfig())
+            springCfgProvider = new SpringConfigurationProvider(servletConfig)
         }
         catch (Exception e)
         {
-            LOG.warn("Unable to set up SpringConfigurationProvider: " + e.message, e)
+            LOG.warn("Unable to set up SpringConfigurationProvider: ${e.message}", e)
         }
         LOG.info('JsonCommandServlet init complete')
     }
@@ -98,33 +99,33 @@ public class JsonCommandServlet extends HttpServlet
      * If using UrlRewrite from tuckey.org, then route HTTP Json commands via
      * this 'route' method and list it in the urlrewrite.xml.
      */
-    public void route(HttpServletRequest request, HttpServletResponse response)
+    void route(HttpServletRequest request, HttpServletResponse response)
     {
-        if ("post".equalsIgnoreCase(request.getMethod()))
+        if ("post".equalsIgnoreCase(request.method))
         {
             doPost(request, response)
         }
-        else if ("get".equalsIgnoreCase(request.getMethod()))
+        else if ("get".equalsIgnoreCase(request.method))
         {
             doGet(request, response)
         }
-        else if ("head".equalsIgnoreCase(request.getMethod()))
+        else if ("head".equalsIgnoreCase(request.method))
         {
             doHead(request, response)
         }
-        else if ("put".equalsIgnoreCase(request.getMethod()))
+        else if ("put".equalsIgnoreCase(request.method))
         {
             doPut(request, response)
         }
-        else if ("delete".equalsIgnoreCase(request.getMethod()))
+        else if ("delete".equalsIgnoreCase(request.method))
         {
             doDelete(request, response)
         }
-        else if ("options".equalsIgnoreCase(request.getMethod()))
+        else if ("options".equalsIgnoreCase(request.method))
         {
             doOptions(request, response)
         }
-        else if ("trace".equalsIgnoreCase(request.getMethod()))
+        else if ("trace".equalsIgnoreCase(request.method))
         {
             doTrace(request, response)
         }
@@ -145,6 +146,7 @@ public class JsonCommandServlet extends HttpServlet
 
             // Step 1: Ensure that the request header has Content-Length correctly specified.
             String json = request.getParameter("json")
+            json = URLDecoder.decode(json, "UTF-8")
 
             if (json == null || json.trim().length() < 1)
             {
@@ -152,7 +154,7 @@ public class JsonCommandServlet extends HttpServlet
                 return
             }
 
-            if (LOG.isDebugEnabled())
+            if (LOG.debugEnabled)
             {
                 LOG.debug("GET RESTful JSON")
             }
@@ -190,8 +192,9 @@ public class JsonCommandServlet extends HttpServlet
             byte[] jsonBytes = new byte[request.contentLength]
             IOUtilities.transfer(request.inputStream, jsonBytes)
             String json = new String(jsonBytes, "UTF-8")
+            json = URLDecoder.decode(json, "UTF-8")
 
-            if (LOG.isDebugEnabled())
+            if (LOG.debugEnabled)
             {
                 LOG.debug("POST RESTful JSON")
             }
@@ -231,7 +234,7 @@ public class JsonCommandServlet extends HttpServlet
         Matcher matcher = ConfigurationProvider.getUrlMatcher(request)
         if (matcher == null)
         {
-            String msg = "error: Invalid JSON request - /controller/method not specified: " + json
+            String msg = "error: Invalid JSON request - /controller/method not specified: ${json}"
             LOG.warn(msg)
             return new Envelope(msg, false)
         }
@@ -286,7 +289,7 @@ public class JsonCommandServlet extends HttpServlet
         {
             // Handle response in case of unhandled exception by controller
             Throwable t = getDeepestException(e)
-            String msg = t.getClass().name
+            String msg = t.class.name
             if (t.message != null)
             {
                 msg += ' ' + t.message
@@ -294,7 +297,7 @@ public class JsonCommandServlet extends HttpServlet
 
             if (t instanceof IOException)
             {
-                if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().name))
+                if ("org.apache.catalina.connector.ClientAbortException" == t.class.name)
                 {
                     LOG.info("Client aborted connection while processing JSON request.")
                 }
@@ -309,13 +312,13 @@ public class JsonCommandServlet extends HttpServlet
             }
             else
             {
-                sendJsonResponse(request, response, new Envelope("error: Communications issue between your computer and our website (" + msg + ')', false))
+                sendJsonResponse(request, response, new Envelope("error: Communications issue between your computer and our website (${msg})", false))
             }
             return
         }
 
         // Handle response (if the method did not)
-        if (!response.isCommitted())
+        if (!response.committed)
         {
 	        // Send JSON result
 	        long start = System.nanoTime()
@@ -328,7 +331,7 @@ public class JsonCommandServlet extends HttpServlet
 	            {
 	                json = json.substring(0, 255)
 	            }
-	            LOG.info("Slow return response: " + json + " took " + ((end - start) / 1000000) + " ms")
+	            LOG.info("Slow return response: ${json} took ${((end - start) / 1000000)} ms")
 	        }
         }
     }
@@ -343,7 +346,7 @@ public class JsonCommandServlet extends HttpServlet
     {
         try
         {
-            if (response.isCommitted())
+            if (response.committed)
             {   // Cannot write, response has already been committed.
                 return
             }
@@ -357,7 +360,7 @@ public class JsonCommandServlet extends HttpServlet
         catch (Throwable t)
         {
             t = getDeepestException(t)
-            String msg = t.getClass().name
+            String msg = t.class.name
             if (t.message != null)
             {
                 msg += ' ' + t.message
@@ -365,18 +368,18 @@ public class JsonCommandServlet extends HttpServlet
 
             if (t instanceof IOException)
             {
-                if ("org.apache.catalina.connector.ClientAbortException".equals(t.getClass().name))
+                if ("org.apache.catalina.connector.ClientAbortException" == t.class.name)
                 {
                     LOG.info("Client aborted connection while processing JSON request.")
                 }
                 else
                 {
-                    LOG.warn("IOException - sending response: " + msg)
+                    LOG.warn("IOException - sending response: ${msg}")
                 }
             }
             else if (t instanceof AccessControlException)
             {
-                LOG.warn("AccessControlException - sending response: " + msg)
+                LOG.warn("AccessControlException - sending response: ${msg}")
             }
             else
             {
@@ -394,13 +397,13 @@ public class JsonCommandServlet extends HttpServlet
      */
     private static void writeResponse(HttpServletRequest request, HttpServletResponse response, String json) throws IOException
     {
-        OutputStream jsonBytes = new ByteArrayOutputStream()
+        ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream()
         jsonBytes.write(json.getBytes("UTF-8"))
 
         // For debugging
-        if (LOG.isDebugEnabled())
+        if (LOG.debugEnabled)
         {
-            LOG.debug("  return " + new String(jsonBytes.toByteArray(), "UTF-8"))
+            LOG.debug("  return ${StringUtilities.createUtf8String(jsonBytes.toByteArray())}")
         }
 
         //  Header can be null coming from other WebClients (such as .NET client)
@@ -408,7 +411,7 @@ public class JsonCommandServlet extends HttpServlet
         if (jsonBytes.size() > 512 && header != null && header.contains("gzip"))
         {   // Only compress if the output is longer than 512 bytes.
 
-            OutputStream compressedBytes = new ByteArrayOutputStream(jsonBytes.size())
+            ByteArrayOutputStream compressedBytes = new ByteArrayOutputStream(jsonBytes.size())
             IOUtilities.compressBytes(jsonBytes, compressedBytes)
 
             if (compressedBytes.size() < jsonBytes.size())
@@ -446,10 +449,10 @@ public class JsonCommandServlet extends HttpServlet
 
         // Temporarily wrap return type in Object[] to shrink the return type in JSON format
         String retJson = JsonWriter.objectToJson([envelope.data] as Object[])
-        StringBuilder s = new StringBuilder("{\"data\":")
+        StringBuilder s = new StringBuilder('{"data":')
 
         // Now pull off the Object[] wrapper.
-        if ("[]".equals(retJson))
+        if ('[]' == retJson)
         {
             s.append("null")
         }
@@ -489,13 +492,13 @@ public class JsonCommandServlet extends HttpServlet
         }
         else
         {
-            String msg = e.getClass().name
+            String msg = e.class.name
             if (e.message != null)
             {
                 msg = msg + ' ' + e.message
             }
 
-            LOG.warn("exception occurred: " + msg)
+            LOG.warn("exception occurred: ${msg}")
         }
 
         return e

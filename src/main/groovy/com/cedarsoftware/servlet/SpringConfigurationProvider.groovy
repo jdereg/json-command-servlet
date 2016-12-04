@@ -74,18 +74,18 @@ class SpringConfigurationProvider extends ConfigurationProvider
         try
         {
             Object controller = springAppCtx.getBean(name)
-            Class targetType = controller.getClass()
+            Class targetType = controller.class
             Annotation annotation = ReflectionUtils.getClassAnnotation(targetType, ControllerClass.class)
             if (annotation == null)
             {
-                return new Envelope("error: target '" + controller + "' is not marked as a ControllerClass.", false)
+                return new Envelope("error: target '${controller}' is not marked as a ControllerClass.", false)
             }
             return controller
         }
         catch(Exception e)
         {
-            LOG.warn("Invalid controller target (not found) : " + name)
-            return new Envelope("error: Invalid target '" + name + "'.", false)
+            LOG.warn("Invalid controller target (not found): ${name}")
+            return new Envelope("error: Invalid target '${name}'.", false)
         }
     }
 }

@@ -95,7 +95,7 @@ abstract class ConfigurationProvider
         }
         else
         {
-            String path = request.getRequestURI() - request.getContextPath()
+            String path = request.requestURI - request.contextPath
             matcher = cmdUrlPattern2.matcher(path)
         }
 
@@ -113,12 +113,12 @@ abstract class ConfigurationProvider
      * they do, it is a case of a missing try/catch handler in a Controller method.  Troll the logs to find
      * these and fix them as they come up.
      */
-    public Envelope callController(HttpServletRequest request, String json)
+    Envelope callController(HttpServletRequest request, String json)
     {
         final Matcher matcher = getUrlMatcher(request)
         if (matcher == null)
         {
-            String msg = "error: Invalid JSON request - /controller/method not specified: " + json
+            String msg = "error: Invalid JSON request - /controller/method not specified: ${json}"
             LOG.warn(msg)
             return new Envelope(msg, false)
         }
@@ -142,7 +142,7 @@ abstract class ConfigurationProvider
 
         if (!isMethodAllowed(methodName))
         {
-            String msg = "Method '" + methodName + "' is not allowed to be called remotely on controller '" + controllerName + "'"
+            String msg = "Method '${methodName}' is not allowed to be called remotely on controller '${controllerName}'"
             LOG.warn(msg)
             return new Envelope(msg, false)
         }
@@ -172,19 +172,19 @@ abstract class ConfigurationProvider
         catch (Throwable t)
         {
             t = JsonCommandServlet.getDeepestException(t)
-            String msg = t.getClass().getName()
+            String msg = t.class.name
             if (t.message != null)
             {
                 msg += ' ' + t.message
             }
-            LOG.warn("An exception occurred calling '" + controllerName + '.' + methodName + "'", t)
-            result = "error: '" + methodName + "' failed with the following message: " + msg
+            LOG.warn("An exception occurred calling '${controllerName}.${methodName}'", t)
+            result = "error: '${methodName}' failed with the following message: ${msg}"
             status = false
         }
 
         // Time the Controller call.
         long end = System.nanoTime()
-        String api = logPrefix + ':' + controllerName + '.' + methodName + json
+        String api = "${logPrefix}:${controllerName}.${methodName}${json}"
 
         if (api.length() > 256)
         {
@@ -211,7 +211,7 @@ abstract class ConfigurationProvider
         }
         catch(Exception e)
         {
-            String errMsg = "error: unable to parse JSON argument list on call '" + controllerName + "." + methodName + "'"
+            String errMsg = "error: unable to parse JSON argument list on call '${controllerName}.${methodName}'"
             LOG.error(errMsg, e)
             return new Envelope(errMsg, false)
         }
@@ -221,9 +221,9 @@ abstract class ConfigurationProvider
             return new Envelope("error: Arguments must be either null or a JSON array", false)
         }
 
-        if (LOG.isDebugEnabled())
+        if (LOG.debugEnabled)
         {
-            LOG.debug("  " + controllerName + '.' + methodName + '(' + json.substring(1, json.length() - 1) + ')')
+            LOG.debug("  ${controllerName}.${methodName}(${json.substring(1, json.length() - 1)})")
         }
 
         return jArgs
@@ -246,7 +246,7 @@ abstract class ConfigurationProvider
         Method method = methodMap[methodKey]
         if (method == null)
         {
-            method = getMethod(controller.getClass(), methodName, argCount)
+            method = getMethod(controller.class, methodName, argCount)
             if (method == null)
             {
                 return new Envelope("error: Method not found: " + methodKey, false)
@@ -258,7 +258,7 @@ abstract class ConfigurationProvider
                 ControllerMethod cm = (ControllerMethod)a
                 if ("false".equalsIgnoreCase(cm.allow()))
                 {
-                    return new Envelope("error: Method '" + methodName + "' is not allowed to be called via HTTP Request.", false)
+                    return new Envelope("error: Method '${methodName}' is not allowed to be called via HTTP Request.", false)
                 }
             }
 
@@ -279,7 +279,7 @@ abstract class ConfigurationProvider
         Method[] methods = c.methods
         for (Method method : methods)
         {
-            if (name.equals(method.name) && method.parameterTypes.length == argc)
+            if (name == method.name && method.parameterTypes.length == argc)
             {
                 return method
             }
@@ -337,7 +337,7 @@ abstract class ConfigurationProvider
             {   // Special handle an argument of type 'Class' because isLogicalPrimitive() is true for Class.
                 converted[i] = args[i]
             }
-            else if (MetaUtils.isLogicalPrimitive(args[i].getClass()))
+            else if (MetaUtils.isLogicalPrimitive(args[i].class))
             {   // Marshal all primitive types, including Date, String (any combination of directions -
                 // String to number, number to String, Date to String, etc.)  See Converter.convert().
                 converted[i] = Converter.convert(args[i], types[i])
@@ -348,19 +348,19 @@ abstract class ConfigurationProvider
                 {   // easy: Collection to Collection Type
                     converted[i] = args[i]
                 }
-                else if (types[i].isArray())
+                else if (types[i].array)
                 {   // hard: Collection to array type (handles any array type, String[], Object[], Custom[], etc.)
                     Collection inbound = (Collection)args[i]
                     converted[i] = arrayBuilder(types[i].componentType, inbound)
                 }
                 else
                 {
-                    throw new IllegalArgumentException("Cannot pass Collection into an argument type that is not a Collection or Array[], arg type: " + types[i].getName())
+                    throw new IllegalArgumentException("Cannot pass Collection into an argument type that is not a Collection or Array[], arg type: ${types[i].name}")
                 }
             }
-            else if (args[i].getClass().isArray())
+            else if (args[i].class.array)
             {
-                if (types[i].isArray())
+                if (types[i].array)
                 {   // easy: array to array
                     converted[i] = args[i]
                 }
@@ -374,12 +374,12 @@ abstract class ConfigurationProvider
                     }
                     catch (Exception e)
                     {
-                        throw new IllegalArgumentException("Could not create Collection instance for type: " + types[i].name)
+                        throw new IllegalArgumentException("Could not create Collection instance for type: ${types[i].name}", e)
                     }
                 }
                 else
                 {
-                    throw new IllegalArgumentException("Cannot pass Array[] into an argument type that is not a Collection or Array[], arg type: " + types[i].name)
+                    throw new IllegalArgumentException("Cannot pass Array[] into an argument type that is not a Collection or Array[], arg type: ${types[i].name}")
                 }
             }
             else if (args[i] instanceof JsonObject)
@@ -397,7 +397,7 @@ abstract class ConfigurationProvider
                 }
                 catch (Exception e)
                 {
-                    throw new IllegalArgumentException("Unable to convert JSON object to arg type: " + types[i].name, e)
+                    throw new IllegalArgumentException("Unable to convert JSON object to arg type: ${types[i].name}", e)
                 }
             }
             else if (args[i] instanceof Map)
@@ -409,7 +409,7 @@ abstract class ConfigurationProvider
                 }
                 else
                 {   // Map on input, being set into a non-map type.  Make sure @type gets set correctly.
-                    throw new IllegalArgumentException("Unable to convert Map to arg type: " + types[i].name)
+                    throw new IllegalArgumentException("Unable to convert Map to arg type: ${types[i].name}")
                 }
             }
             else
@@ -427,7 +427,7 @@ abstract class ConfigurationProvider
      * @param <T> Type of the array
      * @return Array of the type (T) containing the items from collection 'c'.
      */
-    public static <T> T[] arrayBuilder(Class<T> classToCastTo, Collection c)
+    static <T> T[] arrayBuilder(Class<T> classToCastTo, Collection c)
     {
         T[] array = (T[]) c.toArray((T[]) Array.newInstance(classToCastTo, c.size()))
         Iterator i = c.iterator()
@@ -444,7 +444,7 @@ abstract class ConfigurationProvider
      */
     static class CmdReader extends JsonReader
     {
-        public Object convertParsedMapsToJava(JsonObject root)
+        Object convertParsedMapsToJava(JsonObject root)
         {
             return super.convertParsedMapsToJava(root)
         }
