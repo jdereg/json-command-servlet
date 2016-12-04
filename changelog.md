@@ -1,4 +1,6 @@
 ### Revision History
+* 1.4.0
+ * Updated to handle URI / URL encoded URL arguments
 * 1.3.3
  * GMavenPlus used to compile
  * javadoc.io hosted docs (javadoc hosted there, link available on github readme)
