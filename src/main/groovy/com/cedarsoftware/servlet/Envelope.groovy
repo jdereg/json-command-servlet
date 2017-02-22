@@ -25,8 +25,12 @@ class Envelope
     Object data
     final boolean status
 
-    public Envelope(Object data, boolean status)
+    Envelope(Object data, boolean status)
     {
+        if (data instanceof GString)
+        {
+            data = data.toString()
+        }
         this.data = data
         this.status = status
     }

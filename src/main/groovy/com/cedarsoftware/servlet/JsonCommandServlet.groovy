@@ -19,8 +19,8 @@ import java.util.regex.Matcher
  * convert the return object to JSON and then send that back to the client.
  * The requests are typically made from a Javascript client, although they
  * could easily be made from Python, Java, or Objective C.  The request
- * comes in with http://yoursite.com/json/controllerName/methodName.  The
- * "json" part can be whatever name you map to this servlet in web.xml.
+ * comes in with http://yoursite.com/context/cmd/controllerName/methodName.
+ * The "cmd" part can be whatever name you map to this servlet in web.xml.
  * The arguments are sent as the HTTP POST body, or they can be sent via
  * query params like this:
  * </p><p>
@@ -63,27 +63,17 @@ import java.util.regex.Matcher
  *         limitations under the License.
  */
 @CompileStatic
-public class JsonCommandServlet extends HttpServlet
+class JsonCommandServlet extends HttpServlet
 {
     public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<>()
     public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>()
     public static final String ATTRIBUTE_STATUS = "status"
     public static final String ATTRIBUTE_FAIL_MESSAGE = "failMsg"
     private SpringConfigurationProvider springCfgProvider
-    private NCubeConfigurationProvider nCubeCfgProvider
     private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class)
 
     void init()
     {
-        try
-        {
-            nCubeCfgProvider = new NCubeConfigurationProvider(servletConfig)
-        }
-        catch (Exception e)
-        {
-            LOG.warn("Unable to set up NCubeConfigurationProvider: ${e.message}")
-        }
-
         try
         {
             springCfgProvider = new SpringConfigurationProvider(servletConfig)
@@ -101,31 +91,31 @@ public class JsonCommandServlet extends HttpServlet
      */
     void route(HttpServletRequest request, HttpServletResponse response)
     {
-        if ("post".equalsIgnoreCase(request.method))
+        if ('post'.equalsIgnoreCase(request.method))
         {
             doPost(request, response)
         }
-        else if ("get".equalsIgnoreCase(request.method))
+        else if ('get'.equalsIgnoreCase(request.method))
         {
             doGet(request, response)
         }
-        else if ("head".equalsIgnoreCase(request.method))
+        else if ('head'.equalsIgnoreCase(request.method))
         {
             doHead(request, response)
         }
-        else if ("put".equalsIgnoreCase(request.method))
+        else if ('put'.equalsIgnoreCase(request.method))
         {
             doPut(request, response)
         }
-        else if ("delete".equalsIgnoreCase(request.method))
+        else if ('delete'.equalsIgnoreCase(request.method))
         {
             doDelete(request, response)
         }
-        else if ("options".equalsIgnoreCase(request.method))
+        else if ('options'.equalsIgnoreCase(request.method))
         {
             doOptions(request, response)
         }
-        else if ("trace".equalsIgnoreCase(request.method))
+        else if ('trace'.equalsIgnoreCase(request.method))
         {
             doTrace(request, response)
         }
@@ -202,7 +192,7 @@ public class JsonCommandServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            sendJsonResponse(request, response, new Envelope("error: Unable to read HTTP-POST JSON content.", false))
+            sendJsonResponse(request, response, new Envelope("error: Unable to read HTTP-POST JSON content. Message: ${e.message}", false))
         }
         finally
         {
@@ -240,21 +230,12 @@ public class JsonCommandServlet extends HttpServlet
         }
 
         final String controllerName = matcher.group(1)
-
-        Object var = nCubeCfgProvider?.getController(controllerName)
-        if (var instanceof Envelope || var == null)
+        Object var = springCfgProvider?.getController(controllerName)
+        if (var == null)
         {
-            var = springCfgProvider?.getController(controllerName)
-            if (var == null)
-            {
-                throw new IllegalStateException('You have no ConfigurationProviders set for the JsonCommandServlet.  It cannot route any HTTP Requests to controllers.')
-            }
-            return var instanceof Envelope ? var : springCfgProvider
+            throw new IllegalStateException('You have no ConfigurationProviders set for the JsonCommandServlet.  It cannot route any HTTP Requests to controllers.')
         }
-        else
-        {
-            return nCubeCfgProvider
-        }
+        return var instanceof Envelope ? var : springCfgProvider
     }
 
     /**

@@ -1,4 +1,6 @@
 ### Revision History
+* 1.4.1
+  * Moved N-CubeConfigurationProvider from json-command-servlet to the n-cube project.
 * 1.4.0
   * Updated to handle URI / URL encoded URL arguments
 * 1.3.3

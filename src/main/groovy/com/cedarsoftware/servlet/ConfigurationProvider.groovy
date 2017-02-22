@@ -81,7 +81,7 @@ abstract class ConfigurationProvider
     protected abstract String getLogPrefix()
 
     /**
-     * Get a regex Matcher that matches the URL String for /context/controller/method
+     * Get a regex Matcher that matches the URL String for /context/cmd/controller/method
      * @param request HttpServletRequest passed to the command servlet.
      * @param json String arguments in JSON form from HTTP request
      * @return Matcher that pattern matches the URL or
@@ -110,8 +110,8 @@ abstract class ConfigurationProvider
      * Read the JSON request (susceptible to Exceptions that are allowed to be thrown from here),
      * and then call the appropriate Controller method.  The controller method exceptions are
      * caught and returned carefully as JSON error String responses.  Note, this should not happen - if
-     * they do, it is a case of a missing try/catch handler in a Controller method.  Troll the logs to find
-     * these and fix them as they come up.
+     * they do, it is a case of a missing try/catch handler in a Controller method (or Advice around
+     * the Controller).
      */
     Envelope callController(HttpServletRequest request, String json)
     {

@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-command-servlet</artifactId>
     <packaging>jar</packaging>
-    <version>1.4.0</version>
+    <version>1.4.1</version>
     <description>JSON Command Servlet</description>
     <url>https://github.com/jdereg/json-command-servlet</url>
 
@@ -67,14 +67,13 @@
     </developers>
 
     <properties>
-        <version.java-util>1.25.1</version.java-util>
-        <version.json.io>4.9.1</version.json.io>
-        <version.ncube>3.4.116</version.ncube>
-        <version.groovy>2.4.7</version.groovy>
+        <version.json-io>4.9.8</version.json-io>
+        <version.java-util>1.26.0</version.java-util>
+        <version.groovy>2.4.8</version.groovy>
         <version.servlet>3.1.0</version.servlet>
         <version.log4j>2.5</version.log4j>
         <version.junit>4.12</version.junit>
-        <version.spring>4.3.1.RELEASE</version.spring>
+        <version.spring>4.3.5.RELEASE</version.spring>
         <version.plugin.assembly>2.6</version.plugin.assembly>
         <version.plugin.compiler>3.5.1</version.plugin.compiler>
         <version.plugin.gmavenplus>1.5</version.plugin.gmavenplus>
@@ -233,20 +232,14 @@
 
         <dependency>
             <groupId>com.cedarsoftware</groupId>
+            <artifactId>json-io</artifactId>
+            <version>${version.json-io}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.cedarsoftware</groupId>
             <artifactId>java-util</artifactId>
             <version>${version.java-util}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.cedarsoftware</groupId>
-            <artifactId>json-io</artifactId>
-            <version>${version.json.io}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.cedarsoftware</groupId>
-            <artifactId>n-cube</artifactId>
-            <version>${version.ncube}</version>
         </dependency>
 
         <dependency>

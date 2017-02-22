@@ -84,8 +84,8 @@ class SpringConfigurationProvider extends ConfigurationProvider
         }
         catch(Exception e)
         {
-            LOG.warn("Invalid controller target (not found): ${name}")
-            return new Envelope("error: Invalid target '${name}'.", false)
+            LOG.warn("Invalid controller target (not found): ${name}", e)
+            return new Envelope("Could not locate controller named '${name}'. Error: ${e.message}", false)
         }
     }
 }
