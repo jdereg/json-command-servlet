@@ -181,8 +181,22 @@ class JsonCommandServlet extends HttpServlet
             // Transfer request body to byte[]
             byte[] jsonBytes = new byte[request.contentLength]
             IOUtilities.transfer(request.inputStream, jsonBytes)
-            String json = new String(jsonBytes, "UTF-8")
-            json = URLDecoder.decode(json, "UTF-8")
+            String contentType = request.getHeader('Content-Type')?.toLowerCase() ?: ''
+            String json
+
+            if (contentType.contains('x-www-form-urlencoded'))
+            {
+                json = new String(jsonBytes)
+                json = URLDecoder.decode(json, "UTF-8")
+            }
+            else if (contentType.contains('utf-8') || contentType.contains('utf8') || contentType.contains('application/json'))
+            {
+                json = new String(jsonBytes, "UTF-8")
+            }
+            else
+            {
+                json = new String(jsonBytes)
+            }
 
             if (LOG.debugEnabled)
             {
