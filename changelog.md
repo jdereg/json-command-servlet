@@ -1,4 +1,6 @@
 ### Revision History
+* 1.4.3
+  * Enhancement: All POSTed data is URLDecoded to UTF-8 
 * 1.4.2
   * Enhancement: Content-Type on POST requests inspected for 'x-www-form-urlencoded' in Content-Type HTTP header to determine if URI decoding should be optionally performed on post-data. 
 * 1.4.1
