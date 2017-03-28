@@ -1,6 +1,8 @@
 ### Revision History
 * 1.5.0
-  * Enhancement: 
+  * Enhancement: Return envelope expanded to contain 'exception' field (exception serialized in JSON)
+  * Enhancement: No long allowing ThreadLocal request attributes to override envelope (Controller still can write entire response - streaming case).
+  * Updated library dependences (json-io 4.9.11, groovy 2.4.10)
 * 1.4.3
   * Enhancement: All POSTed data is URLDecoded to UTF-8 
 * 1.4.2
