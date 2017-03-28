@@ -208,11 +208,6 @@ abstract class ConfigurationProvider
             return new Envelope("error: Arguments must be either null or a JSON array", false)
         }
 
-        if (LOG.debugEnabled)
-        {
-            LOG.debug("  ${controllerName}.${methodName}(${json.substring(1, json.length() - 1)})")
-        }
-
         return jArgs
     }
 
