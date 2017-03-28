@@ -152,8 +152,8 @@ abstract class ConfigurationProvider
         // return them as errors.  This separates the errors related to communication from errors related to the
         // Controller throwing an exception.
         Object result
-        boolean status = true
         long start = System.nanoTime()
+        Throwable exception = null
 
         try
         {
@@ -171,15 +171,16 @@ abstract class ConfigurationProvider
         }
         catch (Throwable t)
         {
-            t = JsonCommandServlet.getDeepestException(t)
-            String msg = t.class.name
-            if (t.message != null)
+            exception = JsonCommandServlet.getDeepestException(t)
+            JsonCommandServlet.servletRequest.get().setAttribute(JsonCommandServlet.ATTRIBUTE_EXCEPTION, exception)
+            String msg = exception.class.name
+            if (exception.message != null)
             {
-                msg += ' ' + t.message
+                msg += ' ' + exception.message
             }
-            LOG.warn("An exception occurred calling '${controllerName}.${methodName}'", t)
+            LOG.warn("An exception occurred calling '${controllerName}.${methodName}'", exception)
             result = "error: '${methodName}' failed with the following message: ${msg}"
-            status = false
+            JsonCommandServlet.servletRequest.get().setAttribute(JsonCommandServlet.ATTRIBUTE_STATUS, false)
         }
 
         // Time the Controller call.
@@ -192,7 +193,7 @@ abstract class ConfigurationProvider
         }
         LOG.info(api + ' ' + ((end - start) / 1000000) + " ms")
 
-        return new Envelope(result, status)
+        return new Envelope(result, JsonCommandServlet.servletRequest.get().getAttribute(JsonCommandServlet.ATTRIBUTE_STATUS) as boolean, JsonCommandServlet.servletRequest.get().getAttribute(JsonCommandServlet.ATTRIBUTE_EXCEPTION) as Throwable)
     }
 
     /**
@@ -213,7 +214,7 @@ abstract class ConfigurationProvider
         {
             String errMsg = "error: unable to parse JSON argument list on call '${controllerName}.${methodName}'"
             LOG.error(errMsg, e)
-            return new Envelope(errMsg, false)
+            return new Envelope(errMsg, false, e)
         }
 
         if (jArgs != null && !(jArgs instanceof Object[]))

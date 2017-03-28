@@ -24,6 +24,7 @@ class Envelope
 {
     Object data
     final boolean status
+    Throwable exception
 
     Envelope(Object data, boolean status)
     {
@@ -33,5 +34,34 @@ class Envelope
         }
         this.data = data
         this.status = status
+        String message
+
+        if (!status)
+        {
+            if (data instanceof String)
+            {
+                message = data as String
+            }
+            else if (data != null)
+            {
+                message = data.toString()
+            }
+            else
+            {
+                message = 'No error data.'
+            }
+            this.exception = new IllegalArgumentException(message)
+        }
+    }
+
+    Envelope(Object data, boolean status, Throwable exception)
+    {
+        if (data instanceof GString)
+        {
+            data = data.toString()
+        }
+        this.data = data
+        this.status = status
+        this.exception = exception
     }
 }

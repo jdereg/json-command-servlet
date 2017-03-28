@@ -69,6 +69,7 @@ class JsonCommandServlet extends HttpServlet
     public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>()
     public static final String ATTRIBUTE_STATUS = "status"
     public static final String ATTRIBUTE_FAIL_MESSAGE = "failMsg"
+    public static final String ATTRIBUTE_EXCEPTION = "exception"
     private SpringConfigurationProvider springCfgProvider
     private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class)
 
@@ -191,7 +192,7 @@ class JsonCommandServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            sendJsonResponse(request, response, new Envelope("error: Unable to read HTTP-POST JSON content. Message: ${e.message}", false))
+            sendJsonResponse(request, response, new Envelope("error: Unable to read HTTP-POST JSON content. Message: ${e.message}", false, e))
         }
         finally
         {
@@ -283,16 +284,16 @@ class JsonCommandServlet extends HttpServlet
                 }
                 else
                 {
-                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request made.", false))
+                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request made.", false, t))
                 }
             }
             else if (t instanceof AccessControlException)
             {
-                sendJsonResponse(request, response, new Envelope("error: Your session with our website appears to have ended.  Please log out and back in.", false))
+                sendJsonResponse(request, response, new Envelope("error: Your session with our website appears to have ended.  Please log out and back in.", false, t))
             }
             else
             {
-                sendJsonResponse(request, response, new Envelope("error: Communications issue between your computer and our website (${msg})", false))
+                sendJsonResponse(request, response, new Envelope("error: Communications issue between your computer and our website (${msg})", false, t))
             }
             return
         }
@@ -450,6 +451,18 @@ class JsonCommandServlet extends HttpServlet
         {
             s.append(envelope.status)
         }
+
+        if (envelope.exception != null)
+        {
+            s.append(',"exception":')
+            s.append(JsonWriter.objectToJson(envelope.exception))
+        }
+        else if (request.getAttribute(ATTRIBUTE_EXCEPTION) != null)
+        {
+            s.append(',"exception":')
+            s.append(JsonWriter.objectToJson(request.getAttribute(ATTRIBUTE_EXCEPTION)))
+        }
+
         s.append('}')
         return s.toString()
     }

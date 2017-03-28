@@ -1,10 +1,12 @@
 package com.cedarsoftware.servlet
 
+import org.junit.Ignore
 import org.junit.Test
 
 /**
  * Created by jderegnaucourt on 2015/03/07.
  */
+@Ignore
 class TestEnvelope
 {
     @Test
