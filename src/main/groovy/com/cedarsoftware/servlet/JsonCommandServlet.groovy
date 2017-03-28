@@ -307,7 +307,7 @@ class JsonCommandServlet extends HttpServlet
 	            {
 	                json = json.substring(0, 255)
 	            }
-	            LOG.info("Slow return response: ${json} took ${((end - start) / 1000000)} ms")
+	            LOG.info("[SLOW - ${((end - start) / 1000000)} ms] response: ${json}")
 	        }
         }
     }
@@ -365,13 +365,51 @@ class JsonCommandServlet extends HttpServlet
     }
 
     /**
+     * Build the response envelope as a String to be returned to the client.
+     * @param request original servlet request
+     * @param response original servlet response
+     * @param envelope data and status to be written
+     * @return String (JSON format) of envelope to be return to client.
+     */
+    private static String buildResponse(HttpServletRequest request, HttpServletResponse response, Envelope envelope)
+    {
+        response.contentType = "application/json"
+        response.setHeader("Cache-Control", "private, no-cache, no-store")
+
+        // Temporarily wrap return type in Object[] to shrink the return type in JSON format
+        String retJson = JsonWriter.objectToJson([envelope.data] as Object[])
+        StringBuilder s = new StringBuilder('{"data":')
+
+        // Now pull off the Object[] wrapper.
+        if ('[]' == retJson)
+        {
+            s.append("null")
+        }
+        else
+        {
+            s.append(retJson.substring(1, retJson.length() - 1))
+        }
+
+        s.append(',"status":')
+        s.append(envelope.status)
+
+        if (envelope.exception != null)
+        {
+            s.append(',"exception":')
+            s.append(getExceptionAsJsonObjectString(envelope.exception))
+        }
+
+        s.append('}')
+        return s.toString()
+    }
+
+    /**
      * Write the response Envelope to the client
      * @param request original servlet request
      * @param response original servlet response
      * @param json String response to write
-     * @throws IOException
      */
-    private static void writeResponse(HttpServletRequest request, HttpServletResponse response, String json) throws IOException
+    private static void writeResponse(HttpServletRequest request, HttpServletResponse response, String json)
     {
         ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream()
         jsonBytes.write(json.getBytes("UTF-8"))
@@ -403,50 +441,23 @@ class JsonCommandServlet extends HttpServlet
         output.flush()
     }
 
-    /**
-     * Build the response envelope as a String to be returned to the client.
-     * @param request original servlet request
-     * @param response original servlet response
-     * @param envelope data and status to be written
-     * @return String (JSON format) of envelope to be return to client.
-     */
-    private static String buildResponse(HttpServletRequest request, HttpServletResponse response, Envelope envelope)
+    private static String getExceptionAsJsonObjectString(Throwable t)
     {
-        response.contentType = "application/json"
-        response.setHeader("Cache-Control", "private, no-cache, no-store")
-
-        // Temporarily wrap return type in Object[] to shrink the return type in JSON format
-        String retJson = JsonWriter.objectToJson([envelope.data] as Object[])
-        StringBuilder s = new StringBuilder('{"data":')
-
-        // Now pull off the Object[] wrapper.
-        if ('[]' == retJson)
+        if (t == null)
         {
-            s.append("null")
-        }
-        else
-        {
-            s.append(retJson.substring(1, retJson.length() - 1))
+            return 'null'
         }
 
-        s.append(',"status":')
-        if (!envelope.status)
-        {   // Servlet handler (invoked method) can force the status to null
-            s.append(false)
-        }
-        else
+        try
         {
-            s.append(envelope.status)
+            String json = JsonWriter.objectToJson(t)
+            return json
         }
-
-        if (envelope.exception != null)
+        catch (Exception e)
         {
-            s.append(',"exception":')
-            s.append(JsonWriter.objectToJson(envelope.exception))
+            String json = JsonWriter.objectToJson(new RuntimeException("Unable to serialize exception. Exception message: ${e.message}, type: ${t.class.name}"))
+            return json
         }
-
-        s.append('}')
-        return s.toString()
     }
 
     /**

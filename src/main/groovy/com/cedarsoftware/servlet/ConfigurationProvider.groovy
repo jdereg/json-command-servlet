@@ -47,7 +47,7 @@ abstract class ConfigurationProvider
     private static final Map<String, Method> methodMap = new ConcurrentHashMap<>()
     private final ServletConfig servletConfig
     private static final Pattern cmdUrlPattern = ~'^/([^/]+)/([^/]+)(.*)$'	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
-    private static final Pattern cmdUrlPattern2 = ~'^/[^/]+/([^/]+)/([^/]+)(.*)$'	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
+    private static final Pattern cmdUrlPattern2 = ~'^/[^/]+/([^/]+)/([^/]+)(.*)$'	// Allows for /context/controller/method/blah blah (where anything after method is ignored up to ?)
 
     ConfigurationProvider(ServletConfig servletConfig)
     {
@@ -152,9 +152,8 @@ abstract class ConfigurationProvider
         // return them as errors.  This separates the errors related to communication from errors related to the
         // Controller throwing an exception.
         Object result
-        long start = System.nanoTime()
         Throwable exception = null
-        boolean status = true
+
         try
         {
             final Object method = getMethod(controller, controllerName, methodName, args.length)
@@ -162,7 +161,6 @@ abstract class ConfigurationProvider
             {
                 return (Envelope) method
             }
-            start = System.nanoTime()  // remove method location from execution time
             result = callMethod((Method) method, controller, args)
         }
         catch (ThreadDeath t)
@@ -179,23 +177,9 @@ abstract class ConfigurationProvider
             }
             LOG.warn("An exception occurred calling '${controllerName}.${methodName}'", exception)
             result = "error: '${methodName}' failed with the following message: ${msg}"
-            status = false
         }
 
-        // Time the Controller call.
-        long end = System.nanoTime()
-        if (LOG.traceEnabled)
-        {
-            String api = "${logPrefix}:${controllerName}.${methodName}${json}"
-
-            if (api.length() > 256) {
-                api = api.substring(0, 255)
-            }
-
-            LOG.trace(api + ' ' + ((end - start) / 1000000) + " ms")
-        }
-
-        return new Envelope(result, status, exception)
+        return new Envelope(result, exception == null, exception)
     }
 
     /**
@@ -245,8 +229,9 @@ abstract class ConfigurationProvider
      */
     private static Object getMethod(Object controller, String controllerName, String methodName, int argCount)
     {
-        String methodKey = controllerName + '.' + methodName + '.' + argCount
+        String methodKey = "${controllerName}.${methodName}.${argCount}"
         Method method = methodMap[methodKey]
+        
         if (method == null)
         {
             method = getMethod(controller.class, methodName, argCount)
