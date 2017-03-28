@@ -154,7 +154,7 @@ abstract class ConfigurationProvider
         Object result
         long start = System.nanoTime()
         Throwable exception = null
-
+        boolean status = true
         try
         {
             final Object method = getMethod(controller, controllerName, methodName, args.length)
@@ -172,7 +172,6 @@ abstract class ConfigurationProvider
         catch (Throwable t)
         {
             exception = JsonCommandServlet.getDeepestException(t)
-            JsonCommandServlet.servletRequest.get().setAttribute(JsonCommandServlet.ATTRIBUTE_EXCEPTION, exception)
             String msg = exception.class.name
             if (exception.message != null)
             {
@@ -180,20 +179,23 @@ abstract class ConfigurationProvider
             }
             LOG.warn("An exception occurred calling '${controllerName}.${methodName}'", exception)
             result = "error: '${methodName}' failed with the following message: ${msg}"
-            JsonCommandServlet.servletRequest.get().setAttribute(JsonCommandServlet.ATTRIBUTE_STATUS, false)
+            status = false
         }
 
         // Time the Controller call.
         long end = System.nanoTime()
-        String api = "${logPrefix}:${controllerName}.${methodName}${json}"
-
-        if (api.length() > 256)
+        if (LOG.traceEnabled)
         {
-            api = api.substring(0, 255)
-        }
-        LOG.info(api + ' ' + ((end - start) / 1000000) + " ms")
+            String api = "${logPrefix}:${controllerName}.${methodName}${json}"
 
-        return new Envelope(result, JsonCommandServlet.servletRequest.get().getAttribute(JsonCommandServlet.ATTRIBUTE_STATUS) as boolean, JsonCommandServlet.servletRequest.get().getAttribute(JsonCommandServlet.ATTRIBUTE_EXCEPTION) as Throwable)
+            if (api.length() > 256) {
+                api = api.substring(0, 255)
+            }
+
+            LOG.trace(api + ' ' + ((end - start) / 1000000) + " ms")
+        }
+
+        return new Envelope(result, status, exception)
     }
 
     /**

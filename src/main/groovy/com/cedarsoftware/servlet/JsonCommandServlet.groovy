@@ -67,9 +67,6 @@ class JsonCommandServlet extends HttpServlet
 {
     public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<>()
     public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>()
-    public static final String ATTRIBUTE_STATUS = "status"
-    public static final String ATTRIBUTE_FAIL_MESSAGE = "failMsg"
-    public static final String ATTRIBUTE_EXCEPTION = "exception"
     private SpringConfigurationProvider springCfgProvider
     private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class)
 
@@ -131,7 +128,6 @@ class JsonCommandServlet extends HttpServlet
     {
         try
         {
-            request.setAttribute(ATTRIBUTE_STATUS, true)  // start with status of true
             servletRequest.set(request)       // store on ThreadLocal
             servletResponse.set(response)     // store on ThreadLocal
 
@@ -166,7 +162,6 @@ class JsonCommandServlet extends HttpServlet
      */
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
     {
-        request.setAttribute(ATTRIBUTE_STATUS, true)   // start with status of true
         servletRequest.set(request)        // store on ThreadLocal
         servletResponse.set(response)      // store on ThreadLocal
 
@@ -417,14 +412,6 @@ class JsonCommandServlet extends HttpServlet
      */
     private static String buildResponse(HttpServletRequest request, HttpServletResponse response, Envelope envelope)
     {
-        Boolean success = (Boolean) request.getAttribute(ATTRIBUTE_STATUS)
-        if (!success && envelope.data == null)
-        {   // If the called method forcefully set status to false, then overwrite the data with the
-            // value from the ATTRIBUTE_FAIL_MESSAGE (which will contain the failure reason), unless
-            // they value being sent is not (null or false).  This allows data to be returned in the
-            // failure case.
-            envelope.data = request.getAttribute(ATTRIBUTE_FAIL_MESSAGE)
-        }
         response.contentType = "application/json"
         response.setHeader("Cache-Control", "private, no-cache, no-store")
 
@@ -443,7 +430,7 @@ class JsonCommandServlet extends HttpServlet
         }
 
         s.append(',"status":')
-        if (!success)
+        if (!envelope.status)
         {   // Servlet handler (invoked method) can force the status to null
             s.append(false)
         }
@@ -456,11 +443,6 @@ class JsonCommandServlet extends HttpServlet
         {
             s.append(',"exception":')
             s.append(JsonWriter.objectToJson(envelope.exception))
-        }
-        else if (request.getAttribute(ATTRIBUTE_EXCEPTION) != null)
-        {
-            s.append(',"exception":')
-            s.append(JsonWriter.objectToJson(request.getAttribute(ATTRIBUTE_EXCEPTION)))
         }
 
         s.append('}')
