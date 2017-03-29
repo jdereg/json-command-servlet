@@ -253,7 +253,7 @@ class JsonCommandServlet extends HttpServlet
             // Handle response in case of unhandled exception by controller
             Throwable t = getDeepestException(e)
             String msg = t.class.name
-            envelope = new Envelope(msg, false, t)
+            envelope = new Envelope(msg, false, e)
             if (t.message != null)
             {
                 msg += ' ' + t.message
