@@ -7,14 +7,13 @@ import com.cedarsoftware.util.io.JsonObject
 import com.cedarsoftware.util.io.JsonReader
 import com.cedarsoftware.util.io.MetaUtils
 import groovy.transform.CompileStatic
-import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.Logger
+import org.springframework.context.ApplicationContext
+import org.springframework.web.context.support.WebApplicationContextUtils
 
 import javax.servlet.ServletConfig
 import javax.servlet.http.HttpServletRequest
 import java.lang.annotation.Annotation
 import java.lang.reflect.Array
-import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Matcher
@@ -41,9 +40,9 @@ import java.util.regex.Pattern
  *         limitations under the License.
  */
 @CompileStatic
-abstract class ConfigurationProvider
+class ConfigurationProvider
 {
-    private static final Logger LOG = LogManager.getLogger(ConfigurationProvider.class)
+    private final ApplicationContext springAppCtx
     private static final Map<String, Method> methodMap = new ConcurrentHashMap<>()
     private final ServletConfig servletConfig
     private static final Pattern cmdUrlPattern = ~'^/([^/]+)/([^/]+)(.*)$'	// Allows for /controller/method/blah blah (where anything after method is ignored up to ?)
@@ -52,6 +51,7 @@ abstract class ConfigurationProvider
     ConfigurationProvider(ServletConfig servletConfig)
     {
         this.servletConfig = servletConfig
+        springAppCtx = WebApplicationContextUtils.getWebApplicationContext(servletConfig.servletContext)
     }
 
     ServletConfig getServletConfig()
@@ -61,24 +61,25 @@ abstract class ConfigurationProvider
 
     /**
      * Fetch the controller with the given name.
-     * @name String name of controller to fetch
-     * @return Object controller instance registered with the given name.  The
-     * controller could be registered as a Spring Bean or an n-cube.
+     * @param name String name of a Controller instance (Spring bean name).
+     * @return Controller instance if successful, otherwise throw BeansException if controller
+     * bean doesn't exist or IllegalArgumentException if class isn't annotated as a controller
      */
-    protected abstract Object getController(String name)
-
-    /**
-     * Verify that the passed in method is allowed to be called remotely.
-     * @param methodName String method name to check
-     * @return boolean true if ok, false otherwise.
-     */
-    protected abstract boolean isMethodAllowed(String methodName)
-
-    /**
-     * @return String prefix to append to log so that we can tell what controller
-     * type was used (spring:, ncube:, etc.)
-     */
-    protected abstract String getLogPrefix()
+    protected Object getController(String name)
+    {
+        if (!springAppCtx.containsBean(name))
+        {
+            throw new IllegalArgumentException("Attempted to call controller with name: ${name}, but no controller with that name exists")
+        }
+        Object controller = springAppCtx.getBean(name)
+        Class targetType = controller.class
+        Annotation annotation = ReflectionUtils.getClassAnnotation(targetType, ControllerClass.class)
+        if (annotation == null)
+        {
+            throw new IllegalArgumentException("error: target '${controller}' is not marked as a ControllerClass.")
+        }
+        return controller
+    }
 
     /**
      * Get a regex Matcher that matches the URL String for /context/cmd/controller/method
@@ -113,73 +114,29 @@ abstract class ConfigurationProvider
      * they do, it is a case of a missing try/catch handler in a Controller method (or Advice around
      * the Controller).
      */
-    Envelope callController(HttpServletRequest request, String json)
+    Object callController(Object controller, HttpServletRequest request, String json)
     {
         final Matcher matcher = getUrlMatcher(request)
         if (matcher == null)
         {
-            String msg = "error: Invalid JSON request - /controller/method not specified: ${json}"
-            LOG.warn(msg)
-            return new Envelope(msg, false)
+            throw new IllegalArgumentException("error: Invalid JSON request - /controller/method not specified: ${json}")
         }
 
         // Step 1: Fetch controller instance by name
         final String controllerName = matcher.group(1)
-        final Object controller = getController(controllerName)
-        if (controller instanceof Envelope)
-        {
-            return (Envelope) controller
-        }
 
         // Step 2: Convert JSON arguments from URL (GET argument or POST body) to Object[]
         final String methodName = matcher.group(2)
         Object jArgs = getArguments(json, controllerName, methodName)
-        if (jArgs instanceof Envelope)
-        {
-            return (Envelope) jArgs
-        }
         final Object[] args = (Object[]) jArgs
-
-        if (!isMethodAllowed(methodName))
-        {
-            String msg = "Method '${methodName}' is not allowed to be called remotely on controller '${controllerName}'"
-            LOG.warn(msg)
-            return new Envelope(msg, false)
-        }
 
         // Step 3: Find and invoke method
         // Wrap the call to the Controller so we can detect any methods that fail to catch exceptions and properly
         // return them as errors.  This separates the errors related to communication from errors related to the
         // Controller throwing an exception.
-        Object result
-        Throwable exception = null
-
-        try
-        {
-            final Object method = getMethod(controller, controllerName, methodName, args.length)
-            if (method instanceof Envelope)
-            {
-                return (Envelope) method
-            }
-            result = callMethod((Method) method, controller, args)
-        }
-        catch (ThreadDeath t)
-        {
-            throw t
-        }
-        catch (Throwable t)
-        {
-            exception = JsonCommandServlet.getDeepestException(t)
-            String msg = exception.class.name
-            if (exception.message != null)
-            {
-                msg += ' ' + exception.message
-            }
-            LOG.warn("An exception occurred calling '${controllerName}.${methodName}'", exception)
-            result = "error: '${methodName}' failed with the following message: ${msg}"
-        }
-
-        return new Envelope(result, exception == null, exception)
+        final Method method = getMethod(controller, controllerName, methodName, args.length)
+        Object result = method.invoke(controller, convertArgs(method, args))
+        return result
     }
 
     /**
@@ -198,14 +155,12 @@ abstract class ConfigurationProvider
         }
         catch(Exception e)
         {
-            String errMsg = "error: unable to parse JSON argument list on call '${controllerName}.${methodName}'"
-            LOG.error(errMsg, e)
-            return new Envelope(errMsg, false, e)
+            throw new IllegalArgumentException("error: unable to parse JSON argument list on call '${controllerName}.${methodName}'", e)
         }
 
         if (jArgs != null && !(jArgs instanceof Object[]))
         {
-            return new Envelope("error: Arguments must be either null or a JSON array", false)
+            throw new IllegalArgumentException("error: Arguments must be either null or a JSON array")
         }
 
         return jArgs
@@ -222,7 +177,7 @@ abstract class ConfigurationProvider
      * @param argCount int number of arguments.  This is used as part of the cache key to allow for
      * duplicate method names as long as the argument list length is different.
      */
-    private static Object getMethod(Object controller, String controllerName, String methodName, int argCount)
+    private static Method getMethod(Object controller, String controllerName, String methodName, int argCount)
     {
         String methodKey = "${controllerName}.${methodName}.${argCount}"
         Method method = methodMap[methodKey]
@@ -232,7 +187,7 @@ abstract class ConfigurationProvider
             method = getMethod(controller.class, methodName, argCount)
             if (method == null)
             {
-                return new Envelope("error: Method not found: " + methodKey, false)
+                throw new IllegalArgumentException("error: Method not found: ${methodKey}")
             }
 
             Annotation a = ReflectionUtils.getMethodAnnotation(method, ControllerMethod.class)
@@ -241,7 +196,7 @@ abstract class ConfigurationProvider
                 ControllerMethod cm = (ControllerMethod)a
                 if ("false".equalsIgnoreCase(cm.allow()))
                 {
-                    return new Envelope("error: Method '${methodName}' is not allowed to be called via HTTP Request.", false)
+                    throw new IllegalArgumentException("error: Method '${methodName}' is not allowed to be called via HTTP Request.")
                 }
             }
 
@@ -268,29 +223,6 @@ abstract class ConfigurationProvider
             }
         }
         return null
-    }
-
-    /**
-     * Invoke the passed in method, on the passed in target, with the passed in arguments.
-     * @param method Method to be invoked
-     * @param target instance which contains the method
-     * @param args Object[] of values which line up to the method arguments.
-     * @return Object the value return from the invoked method.
-     */
-    private static Object callMethod(Method method, Object target, Object[] args)
-    {
-        try
-        {
-            return method.invoke(target, convertArgs(method, args))
-        }
-        catch (IllegalAccessException e)
-        {
-            throw new RuntimeException(e)
-        }
-        catch (InvocationTargetException e)
-        {
-            throw new RuntimeException(e.targetException)
-        }
     }
 
     /**
