@@ -4,8 +4,8 @@ import com.cedarsoftware.util.IOUtilities
 import com.cedarsoftware.util.StringUtilities
 import com.cedarsoftware.util.io.JsonWriter
 import groovy.transform.CompileStatic
-import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.Logger
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
@@ -67,18 +67,18 @@ class JsonCommandServlet extends HttpServlet
 {
     public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<>()
     public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>()
-    private SpringConfigurationProvider springCfgProvider
-    private static final Logger LOG = LogManager.getLogger(JsonCommandServlet.class)
+    private ConfigurationProvider configProvider
+    private static final Logger LOG = LoggerFactory.getLogger(JsonCommandServlet.class)
 
     void init()
     {
         try
         {
-            springCfgProvider = new SpringConfigurationProvider(servletConfig)
+            configProvider = new ConfigurationProvider(servletConfig)
         }
         catch (Exception e)
         {
-            LOG.warn("Unable to set up SpringConfigurationProvider: ${e.message}", e)
+            LOG.error("Unable to set up SpringConfigurationProvider: ${e.message}", e)
         }
         LOG.info('JsonCommandServlet init complete')
     }
@@ -214,23 +214,17 @@ class JsonCommandServlet extends HttpServlet
      * found there, then the springCfgProvider is returned.  If the controller cannot be located
      * by name from either provider, and Envelope is returned, indicating this error.
      */
-    private Object getProvider(HttpServletRequest request, String json)
+    private Object getController(HttpServletRequest request, String json)
     {
         Matcher matcher = ConfigurationProvider.getUrlMatcher(request)
         if (matcher == null)
         {
-            String msg = "error: Invalid JSON request - /controller/method not specified: ${json}"
-            LOG.warn(msg)
-            return new Envelope(msg, false)
+            throw new IllegalArgumentException("error: Invalid JSON request - /controller/method not specified: ${json}")
         }
 
         final String controllerName = matcher.group(1)
-        Object var = springCfgProvider?.getController(controllerName)
-        if (var == null)
-        {
-            throw new IllegalStateException('You have no ConfigurationProviders set for the JsonCommandServlet.  It cannot route any HTTP Requests to controllers.')
-        }
-        return var instanceof Envelope ? var : springCfgProvider
+        Object controller = configProvider?.getController(controllerName)
+        return controller
     }
 
     /**
@@ -243,19 +237,12 @@ class JsonCommandServlet extends HttpServlet
      */
     private void handleRequestAndResponse(HttpServletRequest request, HttpServletResponse response, String json)
     {
-        Object envelope
+        Envelope envelope
         try
         {
-            Object provider = getProvider(request, json)
-            if (provider instanceof Envelope)
-            {
-                envelope = provider
-            }
-            else
-            {
-                ConfigurationProvider cfgProvider = (ConfigurationProvider) provider
-                envelope = cfgProvider.callController(request, json)
-            }
+            Object controller = getController(request, json)
+            Object result = configProvider.callController(controller, request, json)
+            envelope = new Envelope(result, true)
         }
         catch (ThreadDeath d)
         {
@@ -266,6 +253,7 @@ class JsonCommandServlet extends HttpServlet
             // Handle response in case of unhandled exception by controller
             Throwable t = getDeepestException(e)
             String msg = t.class.name
+            envelope = new Envelope(msg, false, e)
             if (t.message != null)
             {
                 msg += ' ' + t.message
@@ -288,7 +276,7 @@ class JsonCommandServlet extends HttpServlet
             }
             else
             {
-                sendJsonResponse(request, response, new Envelope("error: Communications issue between your computer and our website (${msg})", false, t))
+                sendJsonResponse(request, response, envelope)
             }
             return
         }
@@ -474,7 +462,7 @@ class JsonCommandServlet extends HttpServlet
 
         if (!(e instanceof AccessControlException || e instanceof IOException))
         {
-            LOG.warn("unexpected exception occurred: ", e)
+            LOG.warn("Exception occurred: ", e)
         }
         else
         {
@@ -484,7 +472,7 @@ class JsonCommandServlet extends HttpServlet
                 msg = msg + ' ' + e.message
             }
 
-            LOG.warn("exception occurred: ${msg}")
+            LOG.warn("Exception occurred: ${msg}")
         }
 
         return e

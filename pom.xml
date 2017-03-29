@@ -71,7 +71,7 @@
         <version.java-util>1.26.0</version.java-util>
         <version.groovy>2.4.10</version.groovy>
         <version.servlet>3.1.0</version.servlet>
-        <version.log4j>2.8</version.log4j>
+        <version.slf4j>1.7.25</version.slf4j>
         <version.junit>4.12</version.junit>
         <version.spring>4.3.7.RELEASE</version.spring>
         <version.plugin.assembly>2.6</version.plugin.assembly>
@@ -219,15 +219,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>${version.log4j}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>${version.log4j}</version>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${version.slf4j}</version>
         </dependency>
 
         <dependency>
