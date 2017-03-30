@@ -264,7 +264,8 @@ class JsonCommandServlet extends HttpServlet
             }
             else if (e instanceof IllegalArgumentException || e instanceof JsonIoException)
             {   // Error occurred within this servlet, attempting to parse args, find method, locating controller, etc.
-                LOG.warn("${e.message}, JSON argument: ${json}")
+                // Exception intentionally not passed on (REST argument errors)
+                LOG.info("${e.message}, JSON argument: ${json}")
             }
             else
             {

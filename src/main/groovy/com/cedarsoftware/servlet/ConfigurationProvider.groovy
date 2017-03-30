@@ -9,6 +9,7 @@ import com.cedarsoftware.util.io.JsonReader
 import com.cedarsoftware.util.io.MetaUtils
 import groovy.transform.CompileStatic
 import org.springframework.context.ApplicationContext
+import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.context.support.WebApplicationContextUtils
 
 import javax.servlet.ServletConfig
@@ -74,10 +75,10 @@ class ConfigurationProvider
         }
         Object controller = springAppCtx.getBean(name)
         Class targetType = controller.class
-        Annotation annotation = ReflectionUtils.getClassAnnotation(targetType, ControllerClass.class)
+        Annotation annotation = ReflectionUtils.getClassAnnotation(targetType, RestController.class)
         if (annotation == null)
         {
-            throw new IllegalArgumentException("error: target '${controller}' is not marked as a ControllerClass")
+            throw new IllegalArgumentException("error: target '${controller}' is not marked as a @RestController")
         }
         return controller
     }
