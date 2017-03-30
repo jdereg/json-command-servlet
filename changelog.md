@@ -1,4 +1,6 @@
 ### Revision History
+* 1.5.1
+  * Enhancement: Exception handling improved. 
 * 1.5.0
   * Enhancement: Return envelope expanded to contain 'exception' field (exception serialized in JSON)
   * Enhancement: No long allowing ThreadLocal request attributes to override envelope (Controller still can write entire response - streaming case).
