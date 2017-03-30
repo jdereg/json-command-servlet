@@ -2,6 +2,7 @@ package com.cedarsoftware.servlet
 
 import com.cedarsoftware.util.IOUtilities
 import com.cedarsoftware.util.StringUtilities
+import com.cedarsoftware.util.io.JsonIoException
 import com.cedarsoftware.util.io.JsonWriter
 import groovy.transform.CompileStatic
 import org.slf4j.Logger
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
+import java.lang.reflect.InvocationTargetException
 import java.security.AccessControlException
 import java.util.regex.Matcher
 
@@ -133,13 +135,14 @@ class JsonCommandServlet extends HttpServlet
 
             // Step 1: Ensure that the request header has Content-Length correctly specified.
             String json = request.getParameter("json")
-            json = URLDecoder.decode(json, "UTF-8")
-
             if (json == null || json.trim().length() < 1)
             {
-                sendJsonResponse(request, response, new Envelope("error: HTTP-GET had empty or no 'json' parameter.", false))
+                String msg = "error: HTTP-GET had empty or no 'json=' argument."
+                LOG.info(msg)
+                sendJsonResponse(request, response, new Envelope(msg, false))
                 return
             }
+            json = URLDecoder.decode(json, "UTF-8")
 
             if (LOG.debugEnabled)
             {
@@ -170,7 +173,9 @@ class JsonCommandServlet extends HttpServlet
             // Ensure that the request header has Content-Length correctly specified.
             if (request.contentLength < 1)
             {
-                sendJsonResponse(request, response, new Envelope("error: Call to server had incorrect Content-Length specified.", false))
+                String msg = "error: Call to server had incorrect Content-Length specified."
+                LOG.info(msg)
+                sendJsonResponse(request, response, new Envelope(msg, false))
                 return
             }
 
@@ -187,7 +192,9 @@ class JsonCommandServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            sendJsonResponse(request, response, new Envelope("error: Unable to read HTTP-POST JSON content. Message: ${e.message}", false, e))
+            String msg = "error: Unable to read HTTP-POST JSON content. Message: ${e.message}"
+            LOG.warn(msg)
+            sendJsonResponse(request, response, new Envelope(msg, false, e))
         }
         finally
         {
@@ -219,7 +226,7 @@ class JsonCommandServlet extends HttpServlet
         Matcher matcher = ConfigurationProvider.getUrlMatcher(request)
         if (matcher == null)
         {
-            throw new IllegalArgumentException("error: Invalid JSON request - /controller/method not specified: ${json}")
+            throw new IllegalArgumentException("error: Invalid JSON request - /controller/method not specified")
         }
 
         final String controllerName = matcher.group(1)
@@ -250,29 +257,42 @@ class JsonCommandServlet extends HttpServlet
         }
         catch (Throwable e)
         {
-            // Handle response in case of unhandled exception by controller
-            Throwable t = getDeepestException(e)
-            String msg = t.class.name
-            envelope = new Envelope(msg, false, e)
-            if (t.message != null)
-            {
-                msg += ' ' + t.message
+            if (e instanceof InvocationTargetException)
+            {   // Error occurred within Controller
+                e = e.cause
+                LOG.info('Controller threw an exception (likely an argument error):', e)
             }
-
-            if (t instanceof IOException)
+            else if (e instanceof IllegalArgumentException || e instanceof JsonIoException)
+            {   // Error occurred within this servlet, attempting to parse args, find method, locating controller, etc.
+                LOG.warn("${e.message}, JSON argument: ${json}")
+            }
+            else
             {
-                if ("org.apache.catalina.connector.ClientAbortException" == t.class.name)
+                LOG.warn('Unexpected exception:', e)
+            }
+            
+            // Handle response in case of unhandled exception by controller
+            String msg = e.message
+            if (StringUtilities.isEmpty(msg))
+            {
+                msg = e.class.name
+            }
+            envelope = new Envelope(msg, false, e)
+
+            if (e instanceof IOException)
+            {
+                if ("org.apache.catalina.connector.ClientAbortException" == e.class.name)
                 {
                     LOG.info("Client aborted connection while processing JSON request.")
                 }
                 else
                 {
-                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request made.", false, t))
+                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request made.", false, e))
                 }
             }
-            else if (t instanceof AccessControlException)
+            else if (e instanceof AccessControlException)
             {
-                sendJsonResponse(request, response, new Envelope("error: Your session with our website appears to have ended.  Please log out and back in.", false, t))
+                sendJsonResponse(request, response, new Envelope("error: Your session with our website appears to have ended.  Please log out and back in.", false, e))
             }
             else
             {

@@ -3,6 +3,7 @@ package com.cedarsoftware.servlet
 import com.cedarsoftware.util.Converter
 import com.cedarsoftware.util.ReflectionUtils
 import com.cedarsoftware.util.StringUtilities
+import com.cedarsoftware.util.io.JsonIoException
 import com.cedarsoftware.util.io.JsonObject
 import com.cedarsoftware.util.io.JsonReader
 import com.cedarsoftware.util.io.MetaUtils
@@ -76,7 +77,7 @@ class ConfigurationProvider
         Annotation annotation = ReflectionUtils.getClassAnnotation(targetType, ControllerClass.class)
         if (annotation == null)
         {
-            throw new IllegalArgumentException("error: target '${controller}' is not marked as a ControllerClass.")
+            throw new IllegalArgumentException("error: target '${controller}' is not marked as a ControllerClass")
         }
         return controller
     }
@@ -119,7 +120,7 @@ class ConfigurationProvider
         final Matcher matcher = getUrlMatcher(request)
         if (matcher == null)
         {
-            throw new IllegalArgumentException("error: Invalid JSON request - /controller/method not specified: ${json}")
+            throw new IllegalArgumentException("error: Invalid JSON request - /controller/method not specified")
         }
 
         // Step 1: Fetch controller instance by name
@@ -153,9 +154,9 @@ class ConfigurationProvider
         {
             jArgs = JsonReader.jsonToJava(json)
         }
-        catch(Exception e)
+        catch(JsonIoException e)
         {
-            throw new IllegalArgumentException("error: unable to parse JSON argument list on call '${controllerName}.${methodName}'", e)
+            throw new IllegalArgumentException("error: unable to parse JSON argument list on call '${controllerName}.${methodName}', parse error: ${e.message}")
         }
 
         if (jArgs != null && !(jArgs instanceof Object[]))
@@ -196,7 +197,7 @@ class ConfigurationProvider
                 ControllerMethod cm = (ControllerMethod)a
                 if ("false".equalsIgnoreCase(cm.allow()))
                 {
-                    throw new IllegalArgumentException("error: Method '${methodName}' is not allowed to be called via HTTP Request.")
+                    throw new IllegalArgumentException("error: Method '${methodName}' is not allowed to be called via HTTP Request")
                 }
             }
 
