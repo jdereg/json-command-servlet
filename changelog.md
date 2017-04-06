@@ -1,4 +1,6 @@
 ### Revision History
+* 1.5.3
+  * Bug fix: Removed URI decoding from doPost()
 * 1.5.2
   * Enhancement: Consumed json-io 4.9.12
   * Enhancement: Utilized Spring @RestController instead of having on @ControllerClass.
