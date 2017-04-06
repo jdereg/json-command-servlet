@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-command-servlet</artifactId>
     <packaging>jar</packaging>
-    <version>1.5.3-SNAPSHOT</version>
+    <version>1.5.3</version>
     <description>JSON Command Servlet</description>
     <url>https://github.com/jdereg/json-command-servlet</url>
 
