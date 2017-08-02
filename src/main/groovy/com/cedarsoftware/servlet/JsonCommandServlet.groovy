@@ -247,6 +247,8 @@ class JsonCommandServlet extends HttpServlet
         Envelope envelope
         try
         {
+//            useful for debugging
+//            LOG.info("JSON request: ${json}")
             Object controller = getController(request, json)
             Object result = configProvider.callController(controller, request, json)
             envelope = new Envelope(result, true)
@@ -420,6 +422,19 @@ class JsonCommandServlet extends HttpServlet
      */
     private static void writeResponse(HttpServletRequest request, HttpServletResponse response, String json)
     {
+//        useful for debugging
+//        if (json == null)
+//        {
+//            LOG.info("JSON response: null")
+//        }
+//        else if (StringUtilities.isEmpty(json))
+//        {
+//            LOG.info("JSON response: empty")
+//        }
+//        else
+//        {
+//            LOG.info("JSON response: ${json}")
+//        }
         ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream()
         jsonBytes.write(json.getBytes("UTF-8"))
 

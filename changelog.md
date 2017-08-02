@@ -1,4 +1,6 @@
 ### Revision History
+* 1.5.4
+  * Bug fix: Enums no longer processed with `Converter.convert()` during argument processing
 * 1.5.3
   * Bug fix: Removed URI decoding from doPost()
 * 1.5.2
