@@ -254,7 +254,7 @@ class ConfigurationProvider
             {   // Special handle an argument of type 'Class' because isLogicalPrimitive() is true for Class.
                 converted[i] = args[i]
             }
-            else if (MetaUtils.isLogicalPrimitive(args[i].class) && !args[i].class.enum)
+            else if (MetaUtils.isLogicalPrimitive(args[i].class))
             {   // Marshal all primitive types, including Date, String (any combination of directions -
                 // String to number, number to String, Date to String, etc.)  See Converter.convert().
                 converted[i] = Converter.convert(args[i], types[i])

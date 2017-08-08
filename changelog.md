@@ -1,11 +1,14 @@
 ### Revision History
+* 1.5.5
+  * Added request URI to errors where the controller / method were not being displayed.
+  * Enums processed with `Converter.convert()` during argument processing (using newer java-util `Converter.convert()` which handles `enum` to `String`)  
 * 1.5.4
   * Bug fix: Enums no longer processed with `Converter.convert()` during argument processing
 * 1.5.3
-  * Bug fix: Removed URI decoding from doPost()
+  * Bug fix: Removed URI decoding from `doPost()`
 * 1.5.2
   * Enhancement: Consumed json-io 4.9.12
-  * Enhancement: Utilized Spring @RestController instead of having on @ControllerClass.
+  * Enhancement: Utilized Spring `@RestController` instead of having on `@ControllerClass`.
 * 1.5.1
   * Enhancement: Exception handling improved. 
 * 1.5.0
@@ -15,7 +18,7 @@
 * 1.4.3
   * Enhancement: All POSTed data is URLDecoded to UTF-8 
 * 1.4.2
-  * Enhancement: Content-Type on POST requests inspected for 'x-www-form-urlencoded' in Content-Type HTTP header to determine if URI decoding should be optionally performed on post-data. 
+  * Enhancement: `Content-Type` on POST requests inspected for 'x-www-form-urlencoded' in Content-Type HTTP header to determine if URI decoding should be optionally performed on post-data. 
 * 1.4.1
   * Moved N-CubeConfigurationProvider from json-command-servlet to the n-cube project.
 * 1.4.0
