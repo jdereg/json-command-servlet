@@ -192,7 +192,7 @@ class JsonCommandServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            String msg = "error: Unable to read HTTP-POST JSON content. Message: ${e.message}"
+            String msg = "error: Unable to read HTTP-POST JSON content from URI: ${request.requestURI}. Message: ${e.message}"
             LOG.warn(msg)
             sendJsonResponse(request, response, new Envelope(msg, false, e))
         }
@@ -262,16 +262,16 @@ class JsonCommandServlet extends HttpServlet
             if (e instanceof InvocationTargetException)
             {   // Error occurred within Controller
                 e = e.cause
-                LOG.info('Controller threw an exception (likely an argument error):', e)
+                LOG.info("Controller threw an exception (likely an argument error) from URI: ${request.requestURI}:", e)
             }
             else if (e instanceof IllegalArgumentException || e instanceof JsonIoException)
             {   // Error occurred within this servlet, attempting to parse args, find method, locating controller, etc.
                 // Exception intentionally not passed on (REST argument errors)
-                LOG.info("${e.message}, JSON argument: ${json}")
+                LOG.info("${e.message}, URI: ${request.requestURI}, JSON argument: ${json}")
             }
             else
             {
-                LOG.warn('Unexpected exception:', e)
+                LOG.warn("Unexpected exception from URI: ${request.requestURI}:", e)
             }
             
             // Handle response in case of unhandled exception by controller
@@ -280,7 +280,7 @@ class JsonCommandServlet extends HttpServlet
             {
                 msg = e.class.name
             }
-            envelope = new Envelope(msg, false, e)
+            envelope = new Envelope("${msg} from URI: ${request.requestURI}", false, e)
 
             if (e instanceof IOException)
             {
@@ -290,7 +290,7 @@ class JsonCommandServlet extends HttpServlet
                 }
                 else
                 {
-                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request made.", false, e))
+                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request made from URI: ${request.requestURI}.", false, e))
                 }
             }
             else if (e instanceof AccessControlException)
