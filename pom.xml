@@ -5,7 +5,7 @@
     <groupId>com.cedarsoftware</groupId>
     <artifactId>json-command-servlet</artifactId>
     <packaging>jar</packaging>
-    <version>1.5.5</version>
+    <version>1.6.0</version>
     <description>JSON Command Servlet</description>
     <url>https://github.com/jdereg/json-command-servlet</url>
 
@@ -67,13 +67,13 @@
     </developers>
 
     <properties>
-        <version.json-io>4.9.12</version.json-io>
+        <version.json-io>4.10.0</version.json-io>
         <version.java-util>1.27.0</version.java-util>
         <version.groovy>2.4.11</version.groovy>
         <version.servlet>3.1.0</version.servlet>
         <version.slf4j>1.7.25</version.slf4j>
         <version.junit>4.12</version.junit>
-        <version.spring>4.3.7.RELEASE</version.spring>
+        <version.spring>4.3.10.RELEASE</version.spring>
         <version.plugin.assembly>2.6</version.plugin.assembly>
         <version.plugin.compiler>3.5.1</version.plugin.compiler>
         <version.plugin.gmavenplus>1.5</version.plugin.gmavenplus>

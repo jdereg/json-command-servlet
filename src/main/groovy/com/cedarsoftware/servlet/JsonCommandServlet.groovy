@@ -15,6 +15,8 @@ import java.lang.reflect.InvocationTargetException
 import java.security.AccessControlException
 import java.util.regex.Matcher
 
+import static java.lang.Math.*
+
 /**
  * <p>This class will accept JSON REST requests, find the named Spring Bean,
  * find the method, and then invoke the method.  Once complete, it will
@@ -262,16 +264,23 @@ class JsonCommandServlet extends HttpServlet
             if (e instanceof InvocationTargetException)
             {   // Error occurred within Controller
                 e = e.cause
-                LOG.info("Controller threw an exception (likely an argument error) from URI: ${request.requestURI}:", e)
+                if (e.cause == null)
+                {   // Likely 'business logic' error like bad input into controller method
+                    LOG.info("Controller threw an exception, request: ${request.requestURI}\n\n${stackToString(e, JsonCommandServlet.class.name)}")
+                }
+                else
+                {
+                    LOG.info("Controller threw an exception, request: ${request.requestURI}", e)
+                }
             }
             else if (e instanceof IllegalArgumentException || e instanceof JsonIoException)
             {   // Error occurred within this servlet, attempting to parse args, find method, locating controller, etc.
                 // Exception intentionally not passed on (REST argument errors)
-                LOG.info("${e.message}, URI: ${request.requestURI}, JSON argument: ${json}")
+                LOG.info("${e.message}\n  URI: ${request.requestURI}\n  JSON argument: ${json}")
             }
             else
             {
-                LOG.warn("Unexpected exception from URI: ${request.requestURI}:", e)
+                LOG.warn("Unexpected exception, request: ${request.requestURI}:", e)
             }
             
             // Handle response in case of unhandled exception by controller
@@ -512,5 +521,56 @@ class JsonCommandServlet extends HttpServlet
         }
 
         return e
+    }
+
+    /**
+     * Get a LOG friendly stack trace as a String, trimmed to begin with the first element that 'contains()'
+     * matches startPattern.  Also, total number of lines can be limited.
+     * @param t Throwable from which to obtain String trace.
+     * @param startPattern package or package and name pattern that starting from the top of the stack, must
+     * be encountered before any lines from the stack trace will be included.
+     * @param maxLines trim the stack to have no more than maxLines.
+     * @return String stack trace in standard form for logging, etc.
+     */
+    static String stackToString(Throwable t, String startPattern, int maxLines = 10000)
+    {
+        StackTraceElement[] elements = t.stackTrace
+        int len = elements.length
+        LinkedList<String> messages = []
+
+        for (int i=0; i < min(len, maxLines); i++)
+        {
+            messages.add(elements[i].toString())
+        }
+
+        boolean found = false
+        Iterator<String> i = messages.descendingIterator()
+        LinkedList<String> trimmed = []
+        
+        while (i.hasNext())
+        {
+            String stackEntry = i.next()
+            if (stackEntry.contains(startPattern))
+            {
+                found = true
+            }
+            if (found)
+            {
+                trimmed.push(stackEntry)
+            }
+        }
+
+        messages.clear()
+        StringBuilder s = new StringBuilder()
+        s.append("${t.class.name}: ${t.message}\n")
+
+        i = trimmed.iterator()
+        while (i.hasNext())
+        {
+            s.append("    ${i.next()}\n")
+        }
+        
+        s.append('    ...')
+        return s
     }
 }

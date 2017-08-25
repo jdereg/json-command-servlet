@@ -1,4 +1,6 @@
 ### Revision History
+* 1.6.0
+  * Enhancement: When logging exceptions thrown by the targeted controller, if it has no nested exception, only log the portion of the stack trace starting from the `JsonCommandServlet`.  Since the error occurred inside the controller, the controller name, method, and argument list were all valid (enough to make the call.)
 * 1.5.5
   * Added request URI to errors where the controller / method were not being displayed.
   * Enums processed with `Converter.convert()` during argument processing (using newer java-util `Converter.convert()` which handles `enum` to `String`)  

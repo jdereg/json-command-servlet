@@ -11,7 +11,7 @@ To include in your project:
 <dependency>
   <groupId>com.cedarsoftware</groupId>
   <artifactId>json-command-servlet</artifactId>
-  <version>1.5.5</version>
+  <version>1.6.0</version>
 </dependency>
 ```
 ### Sponsors
