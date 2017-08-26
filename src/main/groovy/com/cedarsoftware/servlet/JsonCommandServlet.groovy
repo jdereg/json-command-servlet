@@ -15,8 +15,6 @@ import java.lang.reflect.InvocationTargetException
 import java.security.AccessControlException
 import java.util.regex.Matcher
 
-import static java.lang.Math.*
-
 /**
  * <p>This class will accept JSON REST requests, find the named Spring Bean,
  * find the method, and then invoke the method.  Once complete, it will
@@ -247,11 +245,12 @@ class JsonCommandServlet extends HttpServlet
     private void handleRequestAndResponse(HttpServletRequest request, HttpServletResponse response, String json)
     {
         Envelope envelope
+        Object controller
         try
         {
 //            useful for debugging
 //            LOG.info("JSON request: ${json}")
-            Object controller = getController(request, json)
+            controller = getController(request, json)
             Object result = configProvider.callController(controller, request, json)
             envelope = new Envelope(result, true)
         }
@@ -266,7 +265,15 @@ class JsonCommandServlet extends HttpServlet
                 e = e.cause
                 if (e.cause == null)
                 {   // Likely 'business logic' error like bad input into controller method
-                    LOG.info("Controller threw an exception, request: ${request.requestURI}\n\n${stackToString(e, JsonCommandServlet.class.name)}")
+                    if (controller)
+                    {
+                        String[] pieces = controller.inspect().split("@")
+                        LOG.info("Controller threw an exception, request: ${request.requestURI}\n\n${stackToString(e, pieces[0] + '.')}")
+                    }
+                    else
+                    {
+                        LOG.info("Controller threw an exception, request: ${request.requestURI}", e)
+                    }
                 }
                 else
                 {
@@ -529,16 +536,15 @@ class JsonCommandServlet extends HttpServlet
      * @param t Throwable from which to obtain String trace.
      * @param startPattern package or package and name pattern that starting from the top of the stack, must
      * be encountered before any lines from the stack trace will be included.
-     * @param maxLines trim the stack to have no more than maxLines.
      * @return String stack trace in standard form for logging, etc.
      */
-    static String stackToString(Throwable t, String startPattern, int maxLines = 10000)
+    static String stackToString(Throwable t, String startPattern)
     {
         StackTraceElement[] elements = t.stackTrace
         int len = elements.length
         LinkedList<String> messages = []
 
-        for (int i=0; i < min(len, maxLines); i++)
+        for (int i=0; i < len; i++)
         {
             messages.add(elements[i].toString())
         }
@@ -560,11 +566,19 @@ class JsonCommandServlet extends HttpServlet
             }
         }
 
+        if (!found)
+        {
+            i = messages.descendingIterator()
+        }
+        else
+        {
+            i = trimmed.iterator()
+        }
+        
         messages.clear()
         StringBuilder s = new StringBuilder()
         s.append("${t.class.name}: ${t.message}\n")
 
-        i = trimmed.iterator()
         while (i.hasNext())
         {
             s.append("    ${i.next()}\n")

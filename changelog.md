@@ -1,4 +1,6 @@
 ### Revision History
+* 1.6.1
+  * Enhancement: When logging exceptions, trim them back to the Controller entry when it is known to have made it into the controller. 
 * 1.6.0
   * Enhancement: When logging exceptions thrown by the targeted controller, if it has no nested exception, only log the portion of the stack trace starting from the `JsonCommandServlet`.  Since the error occurred inside the controller, the controller name, method, and argument list were all valid (enough to make the call.)
 * 1.5.5
