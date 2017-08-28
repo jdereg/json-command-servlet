@@ -1,5 +1,6 @@
 package com.cedarsoftware.servlet
 
+import com.cedarsoftware.util.ArrayUtilities
 import com.cedarsoftware.util.IOUtilities
 import com.cedarsoftware.util.StringUtilities
 import com.cedarsoftware.util.io.JsonIoException
@@ -221,7 +222,7 @@ class JsonCommandServlet extends HttpServlet
      * found there, then the springCfgProvider is returned.  If the controller cannot be located
      * by name from either provider, and Envelope is returned, indicating this error.
      */
-    private Object getController(HttpServletRequest request, String json)
+    private Object getController(HttpServletRequest request)
     {
         Matcher matcher = ConfigurationProvider.getUrlMatcher(request)
         if (matcher == null)
@@ -250,7 +251,7 @@ class JsonCommandServlet extends HttpServlet
         {
 //            useful for debugging
 //            LOG.info("JSON request: ${json}")
-            controller = getController(request, json)
+            controller = getController(request)
             Object result = configProvider.callController(controller, request, json)
             envelope = new Envelope(result, true)
         }
@@ -260,25 +261,23 @@ class JsonCommandServlet extends HttpServlet
         }
         catch (Throwable e)
         {
+            Map altMsg = null
             if (e instanceof InvocationTargetException)
             {   // Error occurred within Controller
-                e = e.cause
-                if (e.cause == null)
-                {   // Likely 'business logic' error like bad input into controller method
-                    if (controller)
-                    {
-                        String[] pieces = controller.inspect().split("@")
-                        LOG.info("Controller threw an exception, request: ${request.requestURI}\n\n${stackToString(e, pieces[0] + '.')}")
-                    }
-                    else
-                    {
-                        LOG.info("Controller threw an exception, request: ${request.requestURI}", e)
-                    }
+                String[] pieces
+                if (controller)
+                {
+                    pieces = controller.inspect().split("@")
                 }
                 else
                 {
-                    LOG.info("Controller threw an exception, request: ${request.requestURI}", e)
+                    pieces = new String[1]
+                    pieces[0] = JsonCommandServlet.class.name
                 }
+
+                e = e.cause
+                altMsg = buildLogMessages(e, pieces[0] + '.')
+                LOG.info("Controller threw an exception, request: ${request.requestURI}:\n${altMsg.log}")
             }
             else if (e instanceof IllegalArgumentException || e instanceof JsonIoException)
             {   // Error occurred within this servlet, attempting to parse args, find method, locating controller, etc.
@@ -291,7 +290,7 @@ class JsonCommandServlet extends HttpServlet
             }
             
             // Handle response in case of unhandled exception by controller
-            String msg = e.message
+            String msg = altMsg?.msg ?: e.message
             if (StringUtilities.isEmpty(msg))
             {
                 msg = e.class.name
@@ -530,33 +529,124 @@ class JsonCommandServlet extends HttpServlet
         return e
     }
 
-    /**
-     * Get a LOG friendly stack trace as a String, trimmed to begin with the first element that 'contains()'
-     * matches startPattern.  Also, total number of lines can be limited.
-     * @param t Throwable from which to obtain String trace.
-     * @param startPattern package or package and name pattern that starting from the top of the stack, must
-     * be encountered before any lines from the stack trace will be included.
-     * @return String stack trace in standard form for logging, etc.
-     */
-    static String stackToString(Throwable t, String startPattern)
+    private static Map buildLogMessages(Throwable t, String startPattern)
     {
-        StackTraceElement[] elements = t.stackTrace
-        int len = elements.length
-        LinkedList<String> messages = []
+        Map output = [:]
+        StringBuilder sb = new StringBuilder()
+        output.log = buildStack(t, startPattern)
+        while (t != null)
+        {
+            boolean isEmpty = sb.length() == 0
+            sb.append(isEmpty ? t.message : "  Caused by ${t.message}")
+            sb.append('\n\n')
+            t = t.cause
+        }
+        output.msg = sb.toString()
+        return output
+    }
+
+    private static String buildStack(Throwable t, String startPattern)
+    {
+        List<Throwable> stacks = new ArrayList<>()
+
+        while (true)
+        {
+            stacks.add(t)
+            t = t.cause
+            if (t == null)
+            {
+                break
+            }
+        }
+
+        // Convert from LinkedList to direct access list
+        StringBuilder s = new StringBuilder()
+        int len = stacks.size()
 
         for (int i=0; i < len; i++)
         {
-            messages.add(elements[i].toString())
+            Throwable throwable = stacks[i]
+            if (i > 0)
+            {
+                s.append("\n  Caused by: ${throwable.message}\n")
+            }
+            else
+            {
+                s.append("${throwable.message}\n")
+            }
+            Map stackMap = trimStack(throwable, startPattern)
+            Map nextStackMap = trimStack(throwable.cause, startPattern)
+
+            StackTraceElement[] stack = stackMap.trace as StackTraceElement[]
+            StackTraceElement[] nextStack = nextStackMap.trace as StackTraceElement[]
+            s.append(trace(stack, nextStack))
+        }
+
+        return s.toString()
+    }
+
+    private static String trace(StackTraceElement[] stackTrace, StackTraceElement[] nextStrackTrace)
+    {
+        StringBuilder s = new StringBuilder()
+        int len = stackTrace.length
+        for (int i=0; i < len; i++)
+        {
+            s.append('    ')
+            StackTraceElement element = stackTrace[i]
+            if (alreadyExists(element, nextStrackTrace))
+            {
+                s.append('...')
+                return s.toString()
+            }
+            else
+            {
+                s.append(element.toString())
+                s.append('\n')
+            }
+        }
+        return s.toString()
+    }
+
+    private static boolean alreadyExists(StackTraceElement element, StackTraceElement[] stackTrace)
+    {
+        if (ArrayUtilities.isEmpty(stackTrace))
+        {
+            return false
+        }
+
+        for (StackTraceElement traceElement : stackTrace)
+        {
+            if (element == traceElement)
+            {
+                return true
+            }
+        }
+        return false
+    }
+
+    private static Map trimStack(Throwable t, String startPattern)
+    {
+        if (t == null)
+        {
+            return [msg: null, trace: null]
+        }
+        StackTraceElement[] elements = t.stackTrace
+        int len = elements.length
+        LinkedList<StackTraceElement> messages = []
+
+        for (int i=0; i < len; i++)
+        {
+            messages.add(elements[i])
         }
 
         boolean found = false
-        Iterator<String> i = messages.descendingIterator()
-        LinkedList<String> trimmed = []
-        
+        Iterator<StackTraceElement> i = messages.descendingIterator()
+        LinkedList<StackTraceElement> trimmed = []
+
         while (i.hasNext())
         {
-            String stackEntry = i.next()
-            if (stackEntry.contains(startPattern))
+            StackTraceElement stackEntry = i.next()
+            if (stackEntry.toString().startsWith(startPattern))
             {
                 found = true
             }
@@ -566,25 +656,6 @@ class JsonCommandServlet extends HttpServlet
             }
         }
 
-        if (!found)
-        {
-            i = messages.descendingIterator()
-        }
-        else
-        {
-            i = trimmed.iterator()
-        }
-        
-        messages.clear()
-        StringBuilder s = new StringBuilder()
-        s.append("${t.class.name}: ${t.message}\n")
-
-        while (i.hasNext())
-        {
-            s.append("    ${i.next()}\n")
-        }
-        
-        s.append('    ...')
-        return s
+        return [msg: t.message, trace: trimmed.toArray(new StackTraceElement[0])]
     }
 }
