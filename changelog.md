@@ -1,4 +1,6 @@
 ### Revision History
+* 1.6.2
+  * Enhancement: Improved log handling with nested exceptions
 * 1.6.1
   * Enhancement: When logging exceptions, trim them back to the Controller entry when it is known to have made it into the controller. 
 * 1.6.0
