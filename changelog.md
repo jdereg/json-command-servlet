@@ -1,4 +1,6 @@
 ### Revision History
+* 1.6.4
+  * Enhancement: Added support for compressed HTTP POST data
 * 1.6.3
   * Code clean up
 * 1.6.2
