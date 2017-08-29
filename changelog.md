@@ -1,4 +1,6 @@
 ### Revision History
+* 1.6.3
+  * Code clean up
 * 1.6.2
   * Enhancement: Improved log handling with nested exceptions
 * 1.6.1

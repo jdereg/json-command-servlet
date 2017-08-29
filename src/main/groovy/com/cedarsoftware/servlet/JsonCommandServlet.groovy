@@ -531,9 +531,11 @@ class JsonCommandServlet extends HttpServlet
 
     private static Map buildLogMessages(Throwable t, String startPattern)
     {
-        Map output = [:]
+        // Step 1: Build full stack trace String, store it in output.log
+        Map output = [log: buildStack(t, startPattern)]
         StringBuilder sb = new StringBuilder()
-        output.log = buildStack(t, startPattern)
+
+        // Step 2: Build 'user-friendly stack trace error message (all trace.message's), store it in output.msg
         while (t != null)
         {
             boolean isEmpty = sb.length() == 0
@@ -547,39 +549,24 @@ class JsonCommandServlet extends HttpServlet
 
     private static String buildStack(Throwable t, String startPattern)
     {
-        List<Throwable> stacks = new ArrayList<>()
-
-        while (true)
-        {
-            stacks.add(t)
-            t = t.cause
-            if (t == null)
-            {
-                break
-            }
-        }
-
-        // Convert from LinkedList to direct access list
         StringBuilder s = new StringBuilder()
-        int len = stacks.size()
+        int i = 0
 
-        for (int i=0; i < len; i++)
+        while (t)
         {
-            Throwable throwable = stacks[i]
-            if (i > 0)
+            if (i++ == 0)
             {
-                s.append("\n  Caused by: ${throwable.message}\n")
+                s.append("${t.message}\n")
             }
             else
             {
-                s.append("${throwable.message}\n")
+                s.append("\n  Caused by: ${t.message}\n")
             }
-            Map stackMap = trimStack(throwable, startPattern)
-            Map nextStackMap = trimStack(throwable.cause, startPattern)
-
-            StackTraceElement[] stack = stackMap.trace as StackTraceElement[]
-            StackTraceElement[] nextStack = nextStackMap.trace as StackTraceElement[]
+            
+            StackTraceElement[] stack = trimStack(t, startPattern)
+            StackTraceElement[] nextStack = trimStack(t.cause, startPattern)
             s.append(trace(stack, nextStack))
+            t = t.cause
         }
 
         return s.toString()
@@ -624,11 +611,11 @@ class JsonCommandServlet extends HttpServlet
         return false
     }
 
-    private static Map trimStack(Throwable t, String startPattern)
+    private static StackTraceElement[] trimStack(Throwable t, String startPattern)
     {
         if (t == null)
         {
-            return [msg: null, trace: null]
+            return null
         }
         StackTraceElement[] elements = t.stackTrace
         int len = elements.length
@@ -656,6 +643,11 @@ class JsonCommandServlet extends HttpServlet
             }
         }
 
-        return [msg: t.message, trace: trimmed.toArray(new StackTraceElement[0])]
+        if (!found)
+        {   // Pattern never found, use entire stack
+            trimmed = messages
+        }
+
+        return trimmed.toArray(new StackTraceElement[0])
     }
 }
