@@ -183,7 +183,7 @@ class JsonCommandServlet extends HttpServlet
             // Transfer request body to byte[]
             byte[] jsonBytes = new byte[request.contentLength]
             IOUtilities.transfer(request.inputStream, jsonBytes)
-            String json = new String(jsonBytes, "UTF-8")
+            String json = new String(IOUtilities.uncompressBytes(jsonBytes), "UTF-8")
             
             if (LOG.debugEnabled)
             {
