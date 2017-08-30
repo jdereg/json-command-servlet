@@ -556,11 +556,11 @@ class JsonCommandServlet extends HttpServlet
         {
             if (i++ == 0)
             {
-                s.append("${t.message}\n")
+                s.append("${t.class.name}: ${t.message}\n")
             }
             else
             {
-                s.append("\n  Caused by: ${t.message}\n")
+                s.append("\n  Caused by ${t.class.name}: ${t.message}\n")
             }
             
             StackTraceElement[] stack = trimStack(t, startPattern)
