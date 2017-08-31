@@ -1,6 +1,7 @@
 package com.cedarsoftware.servlet
 
 import com.cedarsoftware.util.ArrayUtilities
+import com.cedarsoftware.util.FastByteArrayOutputStream
 import com.cedarsoftware.util.IOUtilities
 import com.cedarsoftware.util.StringUtilities
 import com.cedarsoftware.util.io.JsonIoException
@@ -450,21 +451,20 @@ class JsonCommandServlet extends HttpServlet
 //        {
 //            LOG.info("JSON response: ${json}")
 //        }
-        ByteArrayOutputStream jsonBytes = new ByteArrayOutputStream()
+        FastByteArrayOutputStream jsonBytes = new FastByteArrayOutputStream()
         jsonBytes.write(json.getBytes("UTF-8"))
 
         // For debugging
         if (LOG.debugEnabled)
         {
-            LOG.debug("  return ${StringUtilities.createUtf8String(jsonBytes.toByteArray())}")
+            LOG.debug("  return ${new String(jsonBytes.buffer, 0, jsonBytes.size(), "UTF-8")}")
         }
 
         //  Header can be null coming from other WebClients (such as .NET client)
         String header = request.getHeader("Accept-Encoding")
         if (jsonBytes.size() > 512 && header != null && header.contains("gzip"))
         {   // Only compress if the output is longer than 512 bytes.
-
-            ByteArrayOutputStream compressedBytes = new ByteArrayOutputStream(jsonBytes.size())
+            FastByteArrayOutputStream compressedBytes = new FastByteArrayOutputStream(jsonBytes.size())
             IOUtilities.compressBytes(jsonBytes, compressedBytes)
 
             if (compressedBytes.size() < jsonBytes.size())
@@ -476,7 +476,7 @@ class JsonCommandServlet extends HttpServlet
 
         response.contentLength = jsonBytes.size()
         OutputStream output = new BufferedOutputStream(response.outputStream)
-        jsonBytes.writeTo(output)
+        output.write(jsonBytes.buffer, 0, jsonBytes.size())
         output.flush()
     }
 

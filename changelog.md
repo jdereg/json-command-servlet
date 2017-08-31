@@ -1,6 +1,7 @@
 ### Revision History
 * 1.6.5
   * Added className to exception (in addition to message)
+  * Updated to java-util 1.28.2
 * 1.6.4
   * Enhancement: Added support for compressed HTTP POST data
 * 1.6.3
