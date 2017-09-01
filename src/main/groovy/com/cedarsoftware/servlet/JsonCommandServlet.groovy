@@ -16,6 +16,7 @@ import javax.servlet.http.HttpServletResponse
 import java.lang.reflect.InvocationTargetException
 import java.security.AccessControlException
 import java.util.regex.Matcher
+import java.util.zip.GZIPOutputStream
 
 /**
  * <p>This class will accept JSON REST requests, find the named Spring Bean,
@@ -438,46 +439,30 @@ class JsonCommandServlet extends HttpServlet
      */
     private static void writeResponse(HttpServletRequest request, HttpServletResponse response, String json)
     {
-//        useful for debugging
-//        if (json == null)
-//        {
-//            LOG.info("JSON response: null")
-//        }
-//        else if (StringUtilities.isEmpty(json))
-//        {
-//            LOG.info("JSON response: empty")
-//        }
-//        else
-//        {
-//            LOG.info("JSON response: ${json}")
-//        }
-        FastByteArrayOutputStream jsonBytes = new FastByteArrayOutputStream()
-        jsonBytes.write(json.getBytes("UTF-8"))
-
         // For debugging
         if (LOG.debugEnabled)
         {
-            LOG.debug("  return ${new String(jsonBytes.buffer, 0, jsonBytes.size(), "UTF-8")}")
+            LOG.debug("  return ${json}")
         }
 
         //  Header can be null coming from other WebClients (such as .NET client)
-        String header = request.getHeader("Accept-Encoding")
-        if (jsonBytes.size() > 512 && header != null && header.contains("gzip"))
-        {   // Only compress if the output is longer than 512 bytes.
-            FastByteArrayOutputStream compressedBytes = new FastByteArrayOutputStream(jsonBytes.size())
-            IOUtilities.compressBytes(jsonBytes, compressedBytes)
+        String header = request.getHeader('Accept-Encoding')
+        OutputStream outputStream
 
-            if (compressedBytes.size() < jsonBytes.size())
-            {   // Only write compressed if it is smaller than original JSON String
-                response.setHeader("Content-Encoding", "gzip")
-                jsonBytes = compressedBytes
-            }
+        if (json.length() > 512 && header != null && header.contains("gzip"))
+        {   // Only compress if the output is longer than 512 bytes.
+            response.setHeader("Content-Encoding", "gzip")
+            outputStream = new GZIPOutputStream(response.outputStream)
+        }
+        else
+        {
+            outputStream = response.outputStream
         }
 
-        response.contentLength = jsonBytes.size()
-        OutputStream output = new BufferedOutputStream(response.outputStream)
-        output.write(jsonBytes.buffer, 0, jsonBytes.size())
-        output.flush()
+        PrintWriter writer = new PrintWriter(outputStream)
+        writer.print(json)
+        writer.flush()
+        writer.close()
     }
 
     private static String getExceptionAsJsonObjectString(Throwable t)
