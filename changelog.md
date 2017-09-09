@@ -1,7 +1,11 @@
 ### Revision History
+* 1.6.6
+  * When exception message is null, Class name is show in the 'user friendly' message (instead of 'null')
+  * If LOG.debugEnabled, then every HTTP GET or HTTP POST is shown, including the pathInfo and the json payload
+  * Consumed java-util 1.30.0
 * 1.6.5
   * Added className to exception (in addition to message)
-  * Updated to java-util 1.29.0
+  * Consumed java-util 1.29.0
 * 1.6.4
   * Enhancement: Added support for compressed HTTP POST data
 * 1.6.3

@@ -149,7 +149,7 @@ class JsonCommandServlet extends HttpServlet
 
             if (LOG.debugEnabled)
             {
-                LOG.debug("GET RESTful JSON")
+                LOG.debug("HTTP GET(${request.pathInfo}), json=${json}")
             }
 
             handleRequestAndResponse(request, response, json)
@@ -186,10 +186,10 @@ class JsonCommandServlet extends HttpServlet
             byte[] jsonBytes = new byte[request.contentLength]
             IOUtilities.transfer(request.inputStream, jsonBytes)
             String json = new String(IOUtilities.uncompressBytes(jsonBytes), "UTF-8")
-            
+
             if (LOG.debugEnabled)
             {
-                LOG.debug("POST RESTful JSON")
+                LOG.debug("HTTP POST(${request.pathInfo}), body=${json}")
             }
             handleRequestAndResponse(request, response, json)
         }
@@ -442,14 +442,14 @@ class JsonCommandServlet extends HttpServlet
         // For debugging
         if (LOG.debugEnabled)
         {
-            LOG.debug("  return ${json}")
+            LOG.debug("HTTP Response(${request.pathInfo})=${json}")
         }
 
         //  Header can be null coming from other WebClients (such as .NET client)
         String header = request.getHeader('Accept-Encoding')
         OutputStream outputStream
 
-        if (json.length() > 512 && header != null && header.contains("gzip"))
+        if (json.length() > 512 && header?.contains("gzip"))
         {   // Only compress if the output is longer than 512 bytes.
             response.setHeader("Content-Encoding", "gzip")
             outputStream = new GZIPOutputStream(response.outputStream)
@@ -524,7 +524,12 @@ class JsonCommandServlet extends HttpServlet
         while (t != null)
         {
             boolean isEmpty = sb.length() == 0
-            sb.append(isEmpty ? t.message : "  Caused by ${t.message}")
+            String msg = t.message
+            if (StringUtilities.isEmpty(msg))
+            {
+                msg = "${t.class.name}"
+            }
+            sb.append(isEmpty ? msg : "  Caused by ${msg}")
             sb.append('\n\n')
             t = t.cause
         }
@@ -539,13 +544,18 @@ class JsonCommandServlet extends HttpServlet
 
         while (t)
         {
+            String msg = t.message
+            if (StringUtilities.isEmpty(msg))
+            {
+                msg = '(no message)'
+            }
             if (i++ == 0)
             {
-                s.append("${t.class.name}: ${t.message}\n")
+                s.append("${t.class.name}: ${msg}\n")
             }
             else
             {
-                s.append("\n  Caused by ${t.class.name}: ${t.message}\n")
+                s.append("\n  Caused by ${t.class.name}: ${msg}\n")
             }
             
             StackTraceElement[] stack = trimStack(t, startPattern)
