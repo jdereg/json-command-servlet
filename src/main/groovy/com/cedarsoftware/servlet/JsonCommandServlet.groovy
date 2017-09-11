@@ -184,7 +184,7 @@ class JsonCommandServlet extends HttpServlet
 
             // Transfer request body to byte[]
             byte[] jsonBytes = new byte[request.contentLength]
-            IOUtilities.transfer(request.inputStream, jsonBytes)
+            IOUtilities.transfer(new BufferedInputStream(request.inputStream), jsonBytes)
             String json = new String(IOUtilities.uncompressBytes(jsonBytes), "UTF-8")
 
             if (LOG.debugEnabled)
@@ -452,11 +452,11 @@ class JsonCommandServlet extends HttpServlet
         if (json.length() > 512 && header?.contains("gzip"))
         {   // Only compress if the output is longer than 512 bytes.
             response.setHeader("Content-Encoding", "gzip")
-            outputStream = new GZIPOutputStream(response.outputStream)
+            outputStream = new GZIPOutputStream(new BufferedOutputStream(response.outputStream))
         }
         else
         {
-            outputStream = response.outputStream
+            outputStream = new BufferedOutputStream(response.outputStream)
         }
 
         PrintWriter writer = new PrintWriter(outputStream)

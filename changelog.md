@@ -1,4 +1,6 @@
 ### Revision History
+* 1.7.0
+  * Enhancement: Writing output stream using BufferedOutputStream.  POST data read with BufferedInputStream.
 * 1.6.6
   * When exception message is null, Class name is show in the 'user friendly' message (instead of 'null')
   * If LOG.debugEnabled, then every HTTP GET or HTTP POST is shown, including the pathInfo and the json payload
