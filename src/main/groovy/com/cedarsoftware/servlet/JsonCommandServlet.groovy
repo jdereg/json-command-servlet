@@ -1,7 +1,7 @@
 package com.cedarsoftware.servlet
 
+import com.cedarsoftware.util.AdjustableGZIPOutputStream
 import com.cedarsoftware.util.ArrayUtilities
-import com.cedarsoftware.util.FastByteArrayOutputStream
 import com.cedarsoftware.util.IOUtilities
 import com.cedarsoftware.util.StringUtilities
 import com.cedarsoftware.util.io.JsonIoException
@@ -16,7 +16,7 @@ import javax.servlet.http.HttpServletResponse
 import java.lang.reflect.InvocationTargetException
 import java.security.AccessControlException
 import java.util.regex.Matcher
-import java.util.zip.GZIPOutputStream
+import java.util.zip.Deflater
 
 /**
  * <p>This class will accept JSON REST requests, find the named Spring Bean,
@@ -335,7 +335,8 @@ class JsonCommandServlet extends HttpServlet
 	            {
 	                json = json.substring(0, 255)
 	            }
-	            LOG.info("[SLOW - ${((end - start) / 1000000)} ms] response: ${json}")
+                long time = Math.round((end - start) / 1000000.0d)
+                LOG.info("[SLOW - ${time} ms] response: ${json}")
 	        }
         }
     }
@@ -452,7 +453,7 @@ class JsonCommandServlet extends HttpServlet
         if (json.length() > 512 && header?.contains("gzip"))
         {   // Only compress if the output is longer than 512 bytes.
             response.setHeader("Content-Encoding", "gzip")
-            outputStream = new GZIPOutputStream(new BufferedOutputStream(response.outputStream))
+            outputStream = new AdjustableGZIPOutputStream(new BufferedOutputStream(response.outputStream), Deflater.BEST_SPEED)
         }
         else
         {
