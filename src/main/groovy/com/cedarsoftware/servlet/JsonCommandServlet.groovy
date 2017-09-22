@@ -355,8 +355,9 @@ class JsonCommandServlet extends HttpServlet
             {   // Cannot write, response has already been committed.
                 return
             }
-            String json = buildResponse(request, response, envelope)
-            writeResponse(request, response, json)
+            response.contentType = "application/json"
+            response.setHeader("Cache-Control", "private, no-cache, no-store")
+            writeResponse(request, response, envelope)
         }
         catch (ThreadDeath t)
         {
@@ -392,66 +393,21 @@ class JsonCommandServlet extends HttpServlet
             }
         }
     }
-
-    /**
-     * Build the response envelope as a String to be returned to the client.
-     * @param request original servlet request
-     * @param response original servlet response
-     * @param envelope data and status to be written
-     * @return String (JSON format) of envelope to be return to client.
-     */
-    private static String buildResponse(HttpServletRequest request, HttpServletResponse response, Envelope envelope)
-    {
-        response.contentType = "application/json"
-        response.setHeader("Cache-Control", "private, no-cache, no-store")
-
-        // Temporarily wrap return type in Object[] to shrink the return type in JSON format
-        String retJson = JsonWriter.objectToJson([envelope.data] as Object[])
-        StringBuilder s = new StringBuilder('{"data":')
-
-        // Now pull off the Object[] wrapper.
-        if ('[]' == retJson)
-        {
-            s.append("null")
-        }
-        else
-        {
-            s.append(retJson.substring(1, retJson.length() - 1))
-        }
-
-        s.append(',"status":')
-        s.append(envelope.status)
-
-        if (envelope.exception != null)
-        {
-            s.append(',"exception":')
-            s.append(getExceptionAsJsonObjectString(envelope.exception))
-        }
-
-        s.append('}')
-        return s.toString()
-    }
-
+    
     /**
      * Write the response Envelope to the client
      * @param request original servlet request
      * @param response original servlet response
      * @param json String response to write
      */
-    private static void writeResponse(HttpServletRequest request, HttpServletResponse response, String json)
+    private static void writeResponse(HttpServletRequest request, HttpServletResponse response, Envelope envelope)
     {
-        // For debugging
-        if (LOG.debugEnabled)
-        {
-            LOG.debug("HTTP Response(${request.pathInfo})=${json}")
-        }
-
         //  Header can be null coming from other WebClients (such as .NET client)
         String header = request.getHeader('Accept-Encoding')
         OutputStream outputStream
 
-        if (json.length() > 512 && header?.contains("gzip"))
-        {   // Only compress if the output is longer than 512 bytes.
+        if (header?.contains("gzip"))
+        {
             response.setHeader("Content-Encoding", "gzip")
             outputStream = new AdjustableGZIPOutputStream(new BufferedOutputStream(response.outputStream), Deflater.BEST_SPEED)
         }
@@ -460,8 +416,9 @@ class JsonCommandServlet extends HttpServlet
             outputStream = new BufferedOutputStream(response.outputStream)
         }
 
-        PrintWriter writer = new PrintWriter(outputStream)
-        writer.print(json)
+        JsonWriter writer = new JsonWriter(outputStream)
+        Map map = envelope as Map
+        writer.write(map)
         writer.flush()
         writer.close()
     }

@@ -22,9 +22,9 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class Envelope
 {
-    Object data
     final boolean status
     Throwable exception
+    Object data
 
     Envelope(Object data, boolean status)
     {
@@ -63,5 +63,28 @@ class Envelope
         this.data = data
         this.status = status
         this.exception = exception
+    }
+
+    def asType(Class target)
+    {
+        if (Map.isAssignableFrom(target))
+        {
+            Map map = new LinkedHashMap()
+            map.status = status
+            if (exception)
+            {
+                map.exception = exception
+            }
+            map.data = data
+            return map
+        }
+        else if (Envelope.isAssignableFrom(target))
+        {
+            return this
+        }
+        else
+        {
+            throw new IllegalArgumentException("Cannot convert Envelope to ${target.name}")
+        }
     }
 }

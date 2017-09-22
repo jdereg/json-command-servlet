@@ -179,7 +179,7 @@ class ConfigurationProvider
      * @param argCount int number of arguments.  This is used as part of the cache key to allow for
      * duplicate method names as long as the argument list length is different.
      */
-    private static Method getMethod(Object controller, String controllerName, String methodName, int argCount)
+    protected static Method getMethod(Object controller, String controllerName, String methodName, int argCount)
     {
         String methodKey = "${controllerName}.${methodName}.${argCount}"
         Method method = methodMap[methodKey]
@@ -214,7 +214,7 @@ class ConfigurationProvider
      * @param argc int number of arguments
      * @return Method instance located on the passed in class.
      */
-    private static Method getMethod(Class c, String name, int argc)
+    protected static Method getMethod(Class c, String name, int argc)
     {
         Method[] methods = c.methods
         for (Method method : methods)
@@ -239,7 +239,7 @@ class ConfigurationProvider
      * type of the argument into the json-io JsonObject which represents the instance of
      * the class.
      */
-    private static Object[] convertArgs(Method method, Object[] args)
+    protected static Object[] convertArgs(Method method, Object[] args)
     {
         Object[] converted = new Object[args.length]
         Class[] types = method.parameterTypes
@@ -261,18 +261,14 @@ class ConfigurationProvider
             }
             else if (args[i] instanceof Collection)
             {
-                if (Collection.class.isAssignableFrom(types[i]))
-                {   // easy: Collection to Collection Type
-                    converted[i] = args[i]
-                }
-                else if (types[i].array)
+                if (types[i].array)
                 {   // hard: Collection to array type (handles any array type, String[], Object[], Custom[], etc.)
-                    Collection inbound = (Collection)args[i]
+                    Collection inbound = (Collection) args[i]
                     converted[i] = arrayBuilder(types[i].componentType, inbound)
                 }
                 else
                 {
-                    throw new IllegalArgumentException("Cannot pass Collection into an argument type that is not a Collection or Array[], arg type: ${types[i].name}")
+                    converted[i] = args[i].asType(types[i])
                 }
             }
             else if (args[i].class.array)
@@ -281,22 +277,9 @@ class ConfigurationProvider
                 {   // easy: array to array
                     converted[i] = args[i]
                 }
-                else if (Collection.class.isAssignableFrom(types[i]))
-                {   // harder: array to collection
-                    try
-                    {
-                        Collection col = (Collection) JsonReader.newInstance(types[i])
-                        Collections.addAll(col, args)
-                        converted[i] = col
-                    }
-                    catch (Exception e)
-                    {
-                        throw new IllegalArgumentException("Could not create Collection instance for type: ${types[i].name}", e)
-                    }
-                }
                 else
                 {
-                    throw new IllegalArgumentException("Cannot pass Array[] into an argument type that is not a Collection or Array[], arg type: ${types[i].name}")
+                    converted[i] = args[i].asType(types[i])
                 }
             }
             else if (args[i] instanceof JsonObject)

@@ -1,4 +1,7 @@
 ### Revision History
+* 1.8.0
+  * Enhancement: Sped up HTTP response processing by directly writing the JSON response to the `OutputStream` as opposed to converting to a JSON `String` first.
+  * Enhancement: A JSON array (inbound) will be marshalled into a `Set` method argument.  Only `Collection` and arrays were supported before.
 * 1.7.1
   * Enhancement: Updated to use `AdjustableGZIPOutputStream` to allow faster GZIP compression.
   * Consumed java-util 1.31.1
