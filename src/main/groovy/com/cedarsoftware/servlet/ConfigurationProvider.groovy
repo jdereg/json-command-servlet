@@ -1,5 +1,6 @@
 package com.cedarsoftware.servlet
 
+import com.cedarsoftware.util.CaseInsensitiveMap
 import com.cedarsoftware.util.Converter
 import com.cedarsoftware.util.ReflectionUtils
 import com.cedarsoftware.util.StringUtilities
@@ -15,7 +16,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils
 import javax.servlet.ServletConfig
 import javax.servlet.http.HttpServletRequest
 import java.lang.annotation.Annotation
-import java.lang.reflect.Array
+import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Matcher
@@ -259,28 +260,9 @@ class ConfigurationProvider
                 // String to number, number to String, Date to String, etc.)  See Converter.convert().
                 converted[i] = Converter.convert(args[i], types[i])
             }
-            else if (args[i] instanceof Collection)
-            {
-                if (types[i].array)
-                {   // hard: Collection to array type (handles any array type, String[], Object[], Custom[], etc.)
-                    Collection inbound = (Collection) args[i]
-                    converted[i] = arrayBuilder(types[i].componentType, inbound)
-                }
-                else
-                {
-                    converted[i] = args[i].asType(types[i])
-                }
-            }
-            else if (args[i].class.array)
-            {
-                if (types[i].array)
-                {   // easy: array to array
-                    converted[i] = args[i]
-                }
-                else
-                {
-                    converted[i] = args[i].asType(types[i])
-                }
+            else if (args[i] instanceof Collection || args[i].class.array)
+            {   // Arrays, Collections (Sets), ...
+                converted[i] = args[i].asType(types[i])
             }
             else if (args[i] instanceof JsonObject)
             {
@@ -308,35 +290,72 @@ class ConfigurationProvider
                     converted[i] = map
                 }
                 else
-                {   // Map on input, being set into a non-map type.  Make sure @type gets set correctly.
-                    throw new IllegalArgumentException("Unable to convert Map to arg type: ${types[i].name}")
+                {   // Map on input, being marshalled into a non-map type.  Make sure @type gets set correctly.
+                    CmdReader reader = new CmdReader()
+                    try
+                    {
+                        JsonObject jsonObject = new JsonObject()
+                        jsonObject.putAll(args[i] as Map)
+                        jsonObject.type = types[i].name
+                        converted[i] = reader.convertParsedMapsToJava(jsonObject)
+                    }
+                    catch (Exception e)
+                    {
+                        throw new IllegalArgumentException("Unable to convert Map to arg type: ${types[i].name}", e)
+                    }
                 }
             }
             else
             {
-                converted[i] = args[i]
+                if (Map.class.isAssignableFrom(types[i]))
+                {
+                    converted[i] = objectToMap(args[i])
+                }
+                else
+                {
+                    converted[i] = args[i]
+                }
             }
         }
         return converted
     }
-
+    
     /**
-     * Convert Collection to a Java (typed) array [].
-     * @param classToCastTo array type (Object[], Person[], etc.)
-     * @param c Collection containing items to be placed into the array.
-     * @param <T> Type of the array
-     * @return Array of the type (T) containing the items from collection 'c'.
+     * Convert an Object to a Map.  This allows an object to then be passed into n-cube as a coordinate.  Of course
+     * the returned map can have additional key/value pairs added to it after calling this method, but before calling
+     * getCell().
+     * @param o Object any Java object to bind to an NCube.
+     * @return Map where the fields of the object are the field names from the class, and the associated values are
+     * the values associated to the fields on the object.
      */
-    static <T> T[] arrayBuilder(Class<T> classToCastTo, Collection c)
+    static Map objectToMap(final Object o)
     {
-        T[] array = (T[]) c.toArray((T[]) Array.newInstance(classToCastTo, c.size()))
-        Iterator i = c.iterator()
-        int idx = 0
-        while (i.hasNext())
+        try
         {
-            Array.set(array, idx++ as int, i.next())
+            final Collection<Field> fields = ReflectionUtils.getDeepDeclaredFields(o.class)
+            final Iterator<Field> i = fields.iterator()
+            final Map newCoord = new CaseInsensitiveMap<>()
+
+            while (i.hasNext())
+            {
+                final Field field = i.next()
+                final String fieldName = field.name
+                final Object fieldValue = field.get(o)
+                if (newCoord.containsKey(fieldName))
+                {   // This can happen if field name is same between parent and child class (dumb, but possible)
+                    newCoord[field.declaringClass.name + '.' + fieldName] = fieldValue
+                }
+                else
+                {
+                    newCoord[fieldName] = fieldValue
+                }
+            }
+            return newCoord
         }
-        return array
+        catch (Exception e)
+        {
+            throw new RuntimeException("Failed to access field of passed in object.", e)
+        }
     }
 
     /**
