@@ -307,7 +307,7 @@ class JsonCommandServlet extends HttpServlet
                 }
                 else
                 {
-                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request made from URI: ${request.requestURI}.", false, e))
+                    sendJsonResponse(request, response, new Envelope("error: Invalid JSON request: ${request.requestURI}.", false, e))
                 }
             }
             else if (e instanceof AccessControlException)
@@ -326,18 +326,22 @@ class JsonCommandServlet extends HttpServlet
         {
 	        // Send JSON result
 	        long start = System.nanoTime()
-	        sendJsonResponse(request, response, (Envelope) envelope)
+	        sendJsonResponse(request, response, envelope)
 	        long end = System.nanoTime()
+            long time = Math.round((end - start) / 1000000.0d)
 
-	        if (end - start > 2000000000)
+	        if (time > 2000)
 	        {    // Total time more than 2 seconds
 	            if (json.length() > 256)
 	            {
 	                json = json.substring(0, 255)
 	            }
-                long time = Math.round((end - start) / 1000000.0d)
-                LOG.info("[SLOW - ${time} ms] response: ${json}")
+                LOG.info("[SLOW XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
 	        }
+            else if (LOG.debugEnabled)
+            {
+                LOG.debug("[XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
+            }
         }
     }
 
@@ -380,7 +384,7 @@ class JsonCommandServlet extends HttpServlet
                 }
                 else
                 {
-                    LOG.warn("IOException - sending response: ${msg}")
+                    LOG.warn("IOException - sending response: ${msg}", t)
                 }
             }
             else if (t instanceof AccessControlException)
@@ -422,26 +426,7 @@ class JsonCommandServlet extends HttpServlet
         writer.flush()
         writer.close()
     }
-
-    private static String getExceptionAsJsonObjectString(Throwable t)
-    {
-        if (t == null)
-        {
-            return 'null'
-        }
-
-        try
-        {
-            String json = JsonWriter.objectToJson(t)
-            return json
-        }
-        catch (Exception e)
-        {
-            String json = JsonWriter.objectToJson(new RuntimeException("Unable to serialize exception. Exception message: ${e.message}, type: ${t.class.name}"))
-            return json
-        }
-    }
-
+    
     /**
      * Get the deepest (original cause) of the exception chain.
      * @param e Throwable exception that occurred.
