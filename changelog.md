@@ -1,4 +1,8 @@
 ### Revision History
+* 1.8.2
+  * Enhancement: Debug logging includes request path info on all calls, along with response. 
+  * Bug fix: When IOException occurs, full stack is now logged.
+  * Removed unused method.
 * 1.8.1
   * Enhancement: Argument marshalling has been expanded to support Map to specific type as well as specific type to Map.
 * 1.8.0
