@@ -149,13 +149,18 @@ class JsonCommandServlet extends HttpServlet
             }
             json = URLDecoder.decode(json, "UTF-8")
 
+            Logger requiredLogger = null
             if (LOG.debugEnabled)
             {
-                LOG.debug("HTTP GET(${request.pathInfo}), json=${json}")
+                requiredLogger = LOG
             }
             else if (LOG_REQUEST.debugEnabled)
             {
-                LOG_REQUEST.debug("HTTP GET(${request.pathInfo}), json=${json}")
+                requiredLogger = LOG_REQUEST
+            }
+            if (requiredLogger)
+            {
+                requiredLogger.debug("HTTP GET(${request.pathInfo}), json=${json}")
             }
 
             handleRequestAndResponse(request, response, json)
@@ -193,13 +198,18 @@ class JsonCommandServlet extends HttpServlet
             IOUtilities.transfer(new BufferedInputStream(request.inputStream), jsonBytes)
             String json = new String(IOUtilities.uncompressBytes(jsonBytes), "UTF-8")
 
+            Logger requiredLogger = null
             if (LOG.debugEnabled)
             {
-                LOG.debug("HTTP POST(${request.pathInfo}), body=${json}")
+                requiredLogger = LOG
             }
             else if (LOG_REQUEST.debugEnabled)
             {
-                LOG_REQUEST.debug("HTTP POST(${request.pathInfo}), body=${json}")
+                requiredLogger = LOG_REQUEST
+            }
+            if (requiredLogger)
+            {
+                requiredLogger.debug("HTTP POST(${request.pathInfo}), body=${json}")
             }
             handleRequestAndResponse(request, response, json)
         }
@@ -340,6 +350,7 @@ class JsonCommandServlet extends HttpServlet
 	        long end = System.nanoTime()
             long time = Math.round((end - start) / 1000000.0d)
 
+            Logger requiredLogger = null
 	        if (time > 2000)
 	        {    // Total time more than 2 seconds
 	            if (json.length() > 256)
@@ -350,11 +361,15 @@ class JsonCommandServlet extends HttpServlet
 	        }
             else if (LOG.debugEnabled)
             {
-                LOG.debug("[XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
+                requiredLogger = LOG
             }
             else if (LOG_RESPONSE.debugEnabled)
             {
-                LOG_RESPONSE.debug("[XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
+                requiredLogger = LOG_RESPONSE
+            }
+            if (requiredLogger)
+            {
+                requiredLogger.debug("[XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
             }
         }
     }
