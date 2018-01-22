@@ -1,6 +1,6 @@
 ### Revision History
 * 1.8.3
-  * Enhancement: Added additional logger to `JsonCommandServlet` so request messages are separated from other log messages. Turning `LOG_REQUEST` to `debug` level will log GET and POST requests. The new logger is named `com.cedarsoftware.servlet.JsonCommandServletRequest`. 
+  * Enhancement: Added additional loggers to `JsonCommandServlet` so request and response messages can be separated from other log messages. Turning `com.cedarsoftware.servlet.JsonCommandServlet.Request` to `debug` level will log GET and POST requests. Turning `com.cedarsoftware.servlet.JsonCommandServlet.Response` to `debug` will log all responses. 
 * 1.8.2
   * Enhancement: Debug logging includes request path info on all calls, along with response. 
   * Bug fix: When IOException occurs, full stack is now logged.

@@ -74,7 +74,8 @@ class JsonCommandServlet extends HttpServlet
     public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>()
     private ConfigurationProvider configProvider
     private static final Logger LOG = LoggerFactory.getLogger(JsonCommandServlet.class)
-    private static final Logger LOG_REQUEST = LoggerFactory.getLogger("${JsonCommandServlet.class.name}Request")
+    private static final Logger LOG_REQUEST = LoggerFactory.getLogger("${JsonCommandServlet.class.name}.Request")
+    private static final Logger LOG_RESPONSE = LoggerFactory.getLogger("${JsonCommandServlet.class.name}.Response")
 
     void init()
     {
@@ -148,7 +149,11 @@ class JsonCommandServlet extends HttpServlet
             }
             json = URLDecoder.decode(json, "UTF-8")
 
-            if (LOG_REQUEST.debugEnabled)
+            if (LOG.debugEnabled)
+            {
+                LOG.debug("HTTP GET(${request.pathInfo}), json=${json}")
+            }
+            else if (LOG_REQUEST.debugEnabled)
             {
                 LOG_REQUEST.debug("HTTP GET(${request.pathInfo}), json=${json}")
             }
@@ -188,7 +193,11 @@ class JsonCommandServlet extends HttpServlet
             IOUtilities.transfer(new BufferedInputStream(request.inputStream), jsonBytes)
             String json = new String(IOUtilities.uncompressBytes(jsonBytes), "UTF-8")
 
-            if (LOG_REQUEST.debugEnabled)
+            if (LOG.debugEnabled)
+            {
+                LOG.debug("HTTP POST(${request.pathInfo}), body=${json}")
+            }
+            else if (LOG_REQUEST.debugEnabled)
             {
                 LOG_REQUEST.debug("HTTP POST(${request.pathInfo}), body=${json}")
             }
@@ -342,6 +351,10 @@ class JsonCommandServlet extends HttpServlet
             else if (LOG.debugEnabled)
             {
                 LOG.debug("[XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
+            }
+            else if (LOG_RESPONSE.debugEnabled)
+            {
+                LOG_RESPONSE.debug("[XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
             }
         }
     }
