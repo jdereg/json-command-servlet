@@ -586,7 +586,7 @@ class JsonCommandServlet extends HttpServlet
         }
         StackTraceElement[] elements = t.stackTrace
         int len = elements.length
-        LinkedList<StackTraceElement> messages = []
+        LinkedList<StackTraceElement> messages = [] as LinkedList
 
         for (int i=0; i < len; i++)
         {
@@ -595,7 +595,7 @@ class JsonCommandServlet extends HttpServlet
 
         boolean found = false
         Iterator<StackTraceElement> i = messages.descendingIterator()
-        LinkedList<StackTraceElement> trimmed = []
+        LinkedList<StackTraceElement> trimmed = [] as LinkedList
 
         while (i.hasNext())
         {
