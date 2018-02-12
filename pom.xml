@@ -76,7 +76,7 @@
         <version.spring>4.3.11.RELEASE</version.spring>
         <version.plugin.assembly>2.6</version.plugin.assembly>
         <version.plugin.compiler>3.5.1</version.plugin.compiler>
-        <version.plugin.gmavenplus>1.5</version.plugin.gmavenplus>
+        <version.plugin.gmavenplus>1.6</version.plugin.gmavenplus>
         <version.plugin.deploy>2.8.2</version.plugin.deploy>
         <version.plugin.source>3.0.0</version.plugin.source>
         <version.plugin.javadoc>2.10.3</version.plugin.javadoc>
@@ -141,7 +141,7 @@
                             <goal>addSources</goal>
                             <goal>addTestSources</goal>
                             <goal>compile</goal>
-                            <goal>testCompile</goal>
+                            <goal>compileTests</goal>
                         </goals>
                     </execution>
                     <execution>
