@@ -69,21 +69,17 @@
     <properties>
         <version.json-io>4.10.0</version.json-io>
         <version.java-util>1.34.0</version.java-util>
-        <version.groovy>2.4.13</version.groovy>
+        <version.groovy>2.5.1</version.groovy>
         <version.servlet>3.1.0</version.servlet>
         <version.slf4j>1.7.25</version.slf4j>
         <version.junit>4.12</version.junit>
-        <version.spring>4.3.11.RELEASE</version.spring>
-        <version.plugin.assembly>2.6</version.plugin.assembly>
-        <version.plugin.compiler>3.5.1</version.plugin.compiler>
-        <version.plugin.gmavenplus>1.6</version.plugin.gmavenplus>
-        <version.plugin.deploy>2.8.2</version.plugin.deploy>
-        <version.plugin.source>3.0.0</version.plugin.source>
-        <version.plugin.javadoc>2.10.3</version.plugin.javadoc>
+        <version.spring>4.3.17.RELEASE</version.spring>
+        <version.plugin.assembly>3.1.0</version.plugin.assembly>
+        <version.plugin.gmavenplus>1.6.1</version.plugin.gmavenplus>
+        <version.plugin.source>3.0.1</version.plugin.source>
         <version.plugin.gpg>1.6</version.plugin.gpg>
-        <version.plugin.nexus>1.6.7</version.plugin.nexus>
-        <version.plugin.release>2.5.3</version.plugin.release>
-        <version.plugin.surefire>2.19.1</version.plugin.surefire>
+        <version.plugin.nexus>1.6.8</version.plugin.nexus>
+        <version.plugin.surefire>2.21.0</version.plugin.surefire>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -215,6 +211,13 @@
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-all</artifactId>
+            <version>${version.groovy}</version>
+            <type>pom</type>
+        </dependency>
+
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-dateutil</artifactId>
             <version>${version.groovy}</version>
         </dependency>
 

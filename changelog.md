@@ -1,6 +1,6 @@
 ### Revision History
-* 1.8.4-SNAPSHOT
-  * --
+* 1.8.4
+  * Consumed groovy 2.5.1
 * 1.8.3
   * Enhancement: Added additional loggers to `JsonCommandServlet` so request and response messages can be separated from other log messages. Turning `com.cedarsoftware.servlet.JsonCommandServlet.Request` to `debug` level will log GET and POST requests. Turning `com.cedarsoftware.servlet.JsonCommandServlet.Response` to `debug` will log all responses. 
 * 1.8.2
