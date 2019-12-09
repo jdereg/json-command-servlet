@@ -1,4 +1,12 @@
 ### Revision History
+* 1.9.0
+  * Changed built from Maven to Gradle
+  * Added `@Slf4j` annotation instead of using explicitly named logging classes.
+  * Consumed groovy 2.4.17 (done from 2.5.1 as 2.5.x requires java 9+)
+  * Consumed java-util 1.38.0
+  * Consumed json-io 4.11.1
+  * Consumed spring 5.2.2.RELEASE
+  * Consumed javax.servlet-api 4.0.1
 * 1.8.4
   * Consumed groovy 2.5.1
 * 1.8.3

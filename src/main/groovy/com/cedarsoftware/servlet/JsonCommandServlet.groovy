@@ -7,8 +7,7 @@ import com.cedarsoftware.util.StringUtilities
 import com.cedarsoftware.util.io.JsonIoException
 import com.cedarsoftware.util.io.JsonWriter
 import groovy.transform.CompileStatic
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import groovy.util.logging.Slf4j
 
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
@@ -67,15 +66,13 @@ import java.util.zip.Deflater
  *         See the License for the specific language governing permissions and
  *         limitations under the License.
  */
+@Slf4j
 @CompileStatic
 class JsonCommandServlet extends HttpServlet
 {
     public static final ThreadLocal<HttpServletRequest> servletRequest = new ThreadLocal<>()
     public static final ThreadLocal<HttpServletResponse> servletResponse = new ThreadLocal<>()
     private ConfigurationProvider configProvider
-    private static final Logger LOG = LoggerFactory.getLogger(JsonCommandServlet.class)
-    private static final Logger LOG_REQUEST = LoggerFactory.getLogger("${JsonCommandServlet.class.name}.Request")
-    private static final Logger LOG_RESPONSE = LoggerFactory.getLogger("${JsonCommandServlet.class.name}.Response")
 
     void init()
     {
@@ -85,9 +82,9 @@ class JsonCommandServlet extends HttpServlet
         }
         catch (Exception e)
         {
-            LOG.error("Unable to set up SpringConfigurationProvider: ${e.message}", e)
+            log.error("Unable to set up SpringConfigurationProvider: ${e.message}", e)
         }
-        LOG.info('JsonCommandServlet init complete')
+        log.info('JsonCommandServlet init complete')
     }
 
     /**
@@ -143,24 +140,15 @@ class JsonCommandServlet extends HttpServlet
             if (json == null || json.trim().length() < 1)
             {
                 String msg = "error: HTTP-GET had empty or no 'json=' argument."
-                LOG.info(msg)
+                log.info(msg)
                 sendJsonResponse(request, response, new Envelope(msg, false))
                 return
             }
             json = URLDecoder.decode(json, "UTF-8")
 
-            Logger requiredLogger = null
-            if (LOG.debugEnabled)
+            if (log.debugEnabled)
             {
-                requiredLogger = LOG
-            }
-            else if (LOG_REQUEST.debugEnabled)
-            {
-                requiredLogger = LOG_REQUEST
-            }
-            if (requiredLogger)
-            {
-                requiredLogger.debug("HTTP GET(${request.pathInfo}), json=${json}")
+                log.debug("HTTP GET(${request.pathInfo}), json=${json}")
             }
 
             handleRequestAndResponse(request, response, json)
@@ -188,7 +176,7 @@ class JsonCommandServlet extends HttpServlet
             if (request.contentLength < 1)
             {
                 String msg = "error: Call to server had incorrect Content-Length specified."
-                LOG.info(msg)
+                log.info(msg)
                 sendJsonResponse(request, response, new Envelope(msg, false))
                 return
             }
@@ -198,25 +186,16 @@ class JsonCommandServlet extends HttpServlet
             IOUtilities.transfer(new BufferedInputStream(request.inputStream), jsonBytes)
             String json = new String(IOUtilities.uncompressBytes(jsonBytes), "UTF-8")
 
-            Logger requiredLogger = null
-            if (LOG.debugEnabled)
+            if (log.debugEnabled)
             {
-                requiredLogger = LOG
-            }
-            else if (LOG_REQUEST.debugEnabled)
-            {
-                requiredLogger = LOG_REQUEST
-            }
-            if (requiredLogger)
-            {
-                requiredLogger.debug("HTTP POST(${request.pathInfo}), body=${json}")
+                log.debug("HTTP POST(${request.pathInfo}), body=${json}")
             }
             handleRequestAndResponse(request, response, json)
         }
         catch (Exception e)
         {
             String msg = "error: Unable to read HTTP-POST JSON content from URI: ${request.requestURI}. Message: ${e.message}"
-            LOG.warn(msg)
+            log.warn(msg)
             sendJsonResponse(request, response, new Envelope(msg, false, e))
         }
         finally
@@ -299,16 +278,16 @@ class JsonCommandServlet extends HttpServlet
 
                 e = e.cause
                 altMsg = buildLogMessages(e, pieces[0] + '.')
-                LOG.info("Controller threw an exception, request: ${request.requestURI}:\n${altMsg.log}")
+                log.info("Controller threw an exception, request: ${request.requestURI}:\n${altMsg.log}")
             }
             else if (e instanceof IllegalArgumentException || e instanceof JsonIoException)
             {   // Error occurred within this servlet, attempting to parse args, find method, locating controller, etc.
                 // Exception intentionally not passed on (REST argument errors)
-                LOG.info("${e.message}\n  URI: ${request.requestURI}\n  JSON argument: ${json}")
+                log.info("${e.message}\n  URI: ${request.requestURI}\n  JSON argument: ${json}")
             }
             else
             {
-                LOG.warn("Unexpected exception, request: ${request.requestURI}:", e)
+                log.warn("Unexpected exception, request: ${request.requestURI}:", e)
             }
             
             // Handle response in case of unhandled exception by controller
@@ -323,7 +302,7 @@ class JsonCommandServlet extends HttpServlet
             {
                 if ("org.apache.catalina.connector.ClientAbortException" == e.class.name)
                 {
-                    LOG.info("Client aborted connection while processing JSON request.")
+                    log.info("Client aborted connection while processing JSON request.")
                 }
                 else
                 {
@@ -350,26 +329,17 @@ class JsonCommandServlet extends HttpServlet
 	        long end = System.nanoTime()
             long time = Math.round((end - start) / 1000000.0d)
 
-            Logger requiredLogger = null
 	        if (time > 2000)
 	        {    // Total time more than 2 seconds
 	            if (json.length() > 256)
 	            {
 	                json = json.substring(0, 255)
 	            }
-                LOG.info("[SLOW XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
+                log.info("[SLOW XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
 	        }
-            else if (LOG.debugEnabled)
+            if (log.debugEnabled)
             {
-                requiredLogger = LOG
-            }
-            else if (LOG_RESPONSE.debugEnabled)
-            {
-                requiredLogger = LOG_RESPONSE
-            }
-            if (requiredLogger)
-            {
-                requiredLogger.debug("[XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
+                log.debug("[XFR - ${time} ms] request: ${request.pathInfo}, response: ${json}")
             }
         }
     }
@@ -409,20 +379,20 @@ class JsonCommandServlet extends HttpServlet
             {
                 if ("org.apache.catalina.connector.ClientAbortException" == t.class.name)
                 {
-                    LOG.info("Client aborted connection while processing JSON request.")
+                    log.info("Client aborted connection while processing JSON request.")
                 }
                 else
                 {
-                    LOG.warn("IOException - sending response: ${msg}", t)
+                    log.warn("IOException - sending response: ${msg}", t)
                 }
             }
             else if (t instanceof AccessControlException)
             {
-                LOG.warn("AccessControlException - sending response: ${msg}")
+                log.warn("AccessControlException - sending response: ${msg}")
             }
             else
             {
-                LOG.warn("An unexpected exception occurred sending JSON response to client", t)
+                log.warn("An unexpected exception occurred sending JSON response to client", t)
             }
         }
     }
@@ -470,7 +440,7 @@ class JsonCommandServlet extends HttpServlet
 
         if (!(e instanceof AccessControlException || e instanceof IOException))
         {
-            LOG.warn("Exception occurred: ", e)
+            log.warn("Exception occurred: ", e)
         }
         else
         {
@@ -480,7 +450,7 @@ class JsonCommandServlet extends HttpServlet
                 msg = msg + ' ' + e.message
             }
 
-            LOG.warn("Exception occurred: ${msg}")
+            log.warn("Exception occurred: ${msg}")
         }
 
         return e
@@ -615,6 +585,7 @@ class JsonCommandServlet extends HttpServlet
             trimmed = messages
         }
 
-        return trimmed.toArray(new StackTraceElement[0])
+        StackTraceElement[] array = new StackTraceElement[0]
+        return trimmed.toArray(array) as StackTraceElement[]
     }
 }
