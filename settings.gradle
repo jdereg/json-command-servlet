@@ -6,4 +6,4 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
-rootProject.name = 'n-cube'
+rootProject.name = 'json-command-servlet'
