@@ -9,3 +9,4 @@ CVS/
 .project
 .settings/
 gradle.properties
+/build/
