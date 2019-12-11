@@ -9,7 +9,7 @@ plugins {
 
 group = 'com.cedarsoftware'
 description = 'json-command-servlet'
-version = '1.9.0'
+version = '1.9.1-SNAPSHOT'
 
 // Example builds
 //gradle clean build
@@ -37,7 +37,7 @@ repositories {
 dependencies {
     implementation 'org.codehaus.groovy:groovy-all:2.4.17'
     implementation 'com.cedarsoftware:java-util:1.38.0'
-    implementation 'com.cedarsoftware:json-io:4.11.1'
+    implementation 'com.cedarsoftware:json-io:4.12.0'
     implementation 'org.springframework:spring-context:5.2.2.RELEASE'
     implementation 'org.springframework:spring-web:5.2.2.RELEASE'
     implementation 'javax.servlet:javax.servlet-api:4.0.1'

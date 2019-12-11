@@ -1,4 +1,6 @@
 ### Revision History
+* 1.9.1-SNAPSHOT
+  * Consumed json-io 4.12.0
 * 1.9.0
   * Changed built from Maven to Gradle
   * Added `@Slf4j` annotation instead of using explicitly named logging classes.
